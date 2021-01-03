@@ -3,6 +3,9 @@ Lane Detection using PyTorch
 </h2>
 <p align="center">
 
+## Overview
+This repository contains code written explicitly in [**Python 3**](https://www.python.org/) for lane detection. Moreover, [**PyTorch**](https://pytorch.org) framework is used. The
+
 This project is the student final project for Columbia University ECBM E6040 Neural Networks and Deep Learning Research. 
 This project use PyTorch to implement the LaneNet given in the the paper "Towards End-to-End Lane Detection: an Instance
 Segmentation Approach". LaneNet is trained end-to-end for lane detection, by treating lane detection as an instance 
