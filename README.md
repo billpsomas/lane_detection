@@ -8,9 +8,8 @@ This repository contains code written explicitly in [**Python 3**](https://www.p
 
 ## Few words about the idea
 
-
+<img src="img/system_overview.PNG" width="350" align="center">
 **System Overview**
-<img src="img/system_overview.PNG" width="250" align="center">
 
 **LaneNet Architecture**
 ![LaneNet Architecture](img/laneNet_arch.png)
