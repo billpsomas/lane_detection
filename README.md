@@ -8,9 +8,9 @@ This repository contains code written explicitly in [**Python 3**](https://www.p
 
 ## Few words about the idea
 
-<h2 align="center">
+<h3 align="center">
 System Overview
-</h3>
+</h4>
 <p align="center">
 <img src="img/system_overview.PNG" width="350" class="center">
 
