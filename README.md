@@ -9,11 +9,11 @@ This repository contains code written explicitly in [**Python 3**](https://www.p
 ## Few words about the idea
 
 
-**Image from the original paper which shows the LaneNet architecture:**
-![LaneNet architecture](img/laneNet_arch.png)
+**System Overview**
+![LaneNet Overview](img/system_overview.png)
 
-**Image of the processing steps:**
-![LaneNet Result](img/final_result.png)
+**LaneNet Architecture**
+![LaneNet Architecture](img/lanenet_architecture.png)
 
 ___
 ## Table of Contents
@@ -35,13 +35,13 @@ ___
 ___
 ## Download TUSIMPLE dataset
 
-You should download the Lane Detection Challenge dataset from [TUSIMPLE](https://github.com/TuSimple/tusimple-benchmark/issues/3) GitHub repository.
+Firstly, we have to download the Lane Detection Challenge dataset from [TUSIMPLE](https://github.com/TuSimple/tusimple-benchmark/issues/3) GitHub repository.
 
 Moreover:
 
 1. Download [**train_set.zip**](https://s3.us-east-2.amazonaws.com/benchmark-frontend/datasets/1/train_set.zip) and unzip it to folder ``Lane_Detection_PyTorch/TUSIMPLE``
 2. Download [**test_set.zip**](https://s3.us-east-2.amazonaws.com/benchmark-frontend/datasets/1/test_set.zip) and unzip it to folder ``Lane_Detection_PyTorch/TUSIMPLE`` 
-3. Download [**test_label.json**](https://s3.us-east-2.amazonaws.com/benchmark-frontend/truth/1/test_label.json) and put it into the folder ``Lane_Detection_PyTorch/TUSIMPLE/test_set`` which is unzipped form ``test_set.zip``
+3. Download [**test_label.json**](https://s3.us-east-2.amazonaws.com/benchmark-frontend/truth/1/test_label.json) and put it into the folder ``Lane_Detection_PyTorch/TUSIMPLE/test_set`` which is unzipped from ``test_set.zip``
 
 ## Prepare TUSIMPLE dataset
 
