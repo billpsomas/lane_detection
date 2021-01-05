@@ -16,8 +16,11 @@ System Overview
 
 Given an input image, LaneNet outputs a lane instance map, by labeling each lane pixel with a lane id. Next, the lane pixels are trasformed using the transformation matrix outputted by H-Net, which learns a perspective transformation conditioned on the input image. For each lane a 3rd order polynomial is fitted and the laned are reprojected onto the image.
 
-**LaneNet Architecture**
-![LaneNet Architecture](img/laneNet_arch.png)
+<h3 align="center">
+LaneNet Architecture
+</h4>
+<p align="center">
+<img src="img/laneNet_arch.png"class="center">
 
 ___
 ## Table of Contents
