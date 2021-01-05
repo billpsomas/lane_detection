@@ -13,7 +13,7 @@ This repository contains code written explicitly in [**Python 3**](https://www.p
 ![LaneNet Overview](img/system_overview.PNG)
 
 **LaneNet Architecture**
-![LaneNet Architecture](img/lanenet_arch.png)
+![LaneNet Architecture](img/laneNet_arch.png)
 
 ___
 ## Table of Contents
