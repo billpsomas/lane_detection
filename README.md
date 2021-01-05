@@ -6,12 +6,8 @@ Lane Detection using PyTorch
 ## Overview
 This repository contains code written explicitly in [**Python 3**](https://www.python.org/) for lane detection. Moreover, [**PyTorch**](https://pytorch.org) framework is used to implement the LaneNet introduced in [Towards End-to-End Lane Detection: an Instance Segmentation Approach](https://arxiv.org/pdf/1802.05591.pdf). In this paper, authors propose to cast the lane detection problem as an end-to-end instance segmentation problem, in which each lane forms its own instance.
 
-## 
+## Few words about the idea
 
-This project is the student final project for Columbia University ECBM E6040 Neural Networks and Deep Learning Research. 
-This project use PyTorch to implement the LaneNet given in the the paper "Towards End-to-End Lane Detection: an Instance
-Segmentation Approach". LaneNet is trained end-to-end for lane detection, by treating lane detection as an instance 
-segmentation problem. 
 
 **Image from the original paper which shows the LaneNet architecture:**
 ![LaneNet architecture](img/laneNet_arch.png)
@@ -37,25 +33,24 @@ ___
 * [NumPy 1.18.2](https://numpy.org)
 
 ___
-## Download and prepare the dataset
-**Download:**
+## Download TUSIMPLE dataset
 
-You should download the Lane Detection Challenge dataset from [TuSimple](https://github.com/TuSimple/tusimple-benchmark/issues/3)
-dataset
+You should download the Lane Detection Challenge dataset from [TUSIMPLE](https://github.com/TuSimple/tusimple-benchmark/issues/3) GitHub repository.
 
-1. Download ``train_set.zip`` and unzip to folder ``ECBM6040-Project/TUSIMPLE``
-2. Download ``test_set.zip`` and unzip to folder ``ECBM6040-Project/TUSIMPLE`` 
-3. Download ``test_label.json`` and put it into the folder ``ECBM6040-Project/TUSIMPLE/test_set`` which is unzipped form ``test_set.zip``
+Moreover:
 
-**Prepare:**
+1. Download [**train_set.zip**](https://s3.us-east-2.amazonaws.com/benchmark-frontend/datasets/1/train_set.zip) and unzip it to folder ``Lane_Detection_PyTorch/TUSIMPLE``
+2. Download [**test_set.zip**](https://s3.us-east-2.amazonaws.com/benchmark-frontend/datasets/1/test_set.zip) and unzip it to folder ``Lane_Detection_PyTorch/TUSIMPLE`` 
+3. Download [**test_label.json**](https://s3.us-east-2.amazonaws.com/benchmark-frontend/truth/1/test_label.json) and put it into the folder ``Lane_Detection_PyTorch/TUSIMPLE/test_set`` which is unzipped form ``test_set.zip``
 
-After you download the dataset from TuSimple dataset, some preprocess to the dataset should be done to prepare the dataset 
-for training and testing.
+## Prepare TUSIMPLE dataset
+
+After you download the dataset from TUSIMPLE GitHub repository, some preprocess is needed to prepare the dataset for training and testing.
 
 1. Process the ``train_set`` split into ground truth image, binary ground truth and instance ground truth, you should run
 
 ```
-python utils/process_training_dataset_2.py --src_dir (your train_set folder place)
+python utils/process_train_set.py --src_dir (your train_set folder place)
 for me this step is: python utils/process_training_dataset_2.py --src_dir /Users/smiffy/Documents/GitHub/ECBM6040-Project/TUSIMPLE/train_set
 ```
 
