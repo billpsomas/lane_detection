@@ -25,7 +25,7 @@ LaneNet architecture consists of two branches. The segmentation branch (bottom) 
 
 ## TUSIMPLE dataset
 TUSIMPLE is a large scale dataset for testing Deep Learning methods on the lane detection task. It consists of 3626 training and 2782 testing images, under good and medium weather conditions. They are recorded on 2-lane/3-lane/4-lane or more highway roads, at different daytimes. For each image, they also provide the 19 previous frames, which are not annotated.The annotations come in a json format, indicating the xposition of the lanes at a number of discretized y-positions. On each image, the current (ego) lanes and left/right lanes are annotated and this is also expected on the test set. When changing lanes, a 5th lane can be added to avoid confusion.
-
+<!---
 ___
 ## Table of Contents
 
@@ -35,8 +35,9 @@ ___
 - [Do evaluation on the test dataset](#Do-evaluation-on-the-test-dataset)
 - [Generate some GIF to show the result](#Generate-some-GIF-to-show-the-result)
 - [Reference](#Reference)
+--->
 ___
-## Requirement
+## Requirements
 * Python 3.7
 * [PyTorch 1.4.0](https://pytorch.org)
 * [torchvision](https://pytorch.org/docs/stable/torchvision/index.html#torchvision)
