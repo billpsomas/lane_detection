@@ -109,7 +109,11 @@ Let us have a look on TUSIMPLE dataset. We run the following file in Terminal:
 
 This file is creating a ``dataset/samples`` folder, in which it saves some sample images (original, binary lane segmentation, instance segmentation).
 
-
+<h3 align="center">
+LaneNet Architecture
+</h4>
+<p align="center">
+<img src="dataset/samples/sample_image"class="left">
 
 ## Train LaneNet
 1. Dataset for training: You can use ``ECBM6040-Project/Notebook-experiment/Dataset Show.ipynb`` to see the dataset for training
