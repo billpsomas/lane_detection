@@ -1,0 +1,11 @@
+torch
+torchvision
+torch-scatter
+scikit-learn
+numpy
+matplotlib
+opencv-python
+tqdm
+pytest-shutil
+pycopy-shutil
+ujson

@@ -38,12 +38,19 @@ ___
 --->
 ___
 ## Requirements
-* Python 3.7
 * [PyTorch 1.4.0](https://pytorch.org)
 * [torchvision](https://pytorch.org/docs/stable/torchvision/index.html#torchvision)
+* [torch-scatter](https://github.com/rusty1s/pytorch_scatter)
 * [sklearn 0.22.1](https://scikit-learn.org/stable/)
 * [NumPy 1.18.2](https://numpy.org)
+* [Matplotlib](https://matplotlib.org/)
+* [OpenCV](https://opencv.org/)
+* [Tqdm](https://github.com/tqdm/tqdm)
+* [Shutil](https://docs.python.org/3/library/shutil.html)
+* [Ujson](https://github.com/ultrajson/ultrajson)
 
+## Install requirements
+In order to install requirements run ``pip install -r requirements.txt``
 ___
 ## Download TUSIMPLE dataset
 
