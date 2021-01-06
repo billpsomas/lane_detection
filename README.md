@@ -38,22 +38,21 @@ ___
 --->
 ___
 ## Requirements
-* [PyTorch 1.4.0](https://pytorch.org)
+* [PyTorch](https://pytorch.org)
 * [torchvision](https://pytorch.org/docs/stable/torchvision/index.html#torchvision)
 * [torch-scatter](https://github.com/rusty1s/pytorch_scatter)
-* [sklearn 0.22.1](https://scikit-learn.org/stable/)
-* [NumPy 1.18.2](https://numpy.org)
+* [sklearn](https://scikit-learn.org/stable/)
+* [NumPy](https://numpy.org)
 * [Matplotlib](https://matplotlib.org/)
 * [OpenCV](https://opencv.org/)
-* [Tqdm](https://github.com/tqdm/tqdm)
-* [Shutil](https://docs.python.org/3/library/shutil.html)
-* [Ujson](https://github.com/ultrajson/ultrajson)
+* [tqdm](https://github.com/tqdm/tqdm)
+* [shutil](https://docs.python.org/3/library/shutil.html)
+* [ujson](https://github.com/ultrajson/ultrajson)
 
 ## Install requirements
-In order to install requirements run ``pip install -r requirements.txt``
-___
-## Download TUSIMPLE dataset
+In order to install requirements run ``pip3 install -r requirements.txt``
 
+## Download TUSIMPLE dataset
 Firstly, we have to download the Lane Detection Challenge dataset from [TUSIMPLE](https://github.com/TuSimple/tusimple-benchmark/issues/3) GitHub repository.
 
 Moreover:
@@ -63,46 +62,46 @@ Moreover:
 3. Download [**test_label.json**](https://s3.us-east-2.amazonaws.com/benchmark-frontend/truth/1/test_label.json) and put it into the folder ``Lane_Detection_PyTorch/TUSIMPLE/test_set`` which is unzipped from ``test_set.zip``
 
 ## Prepare TUSIMPLE dataset
+After we have downloaded the dataset from TUSIMPLE GitHub repository, some preprocess is needed to prepare the dataset for training and testing.
 
-After you download the dataset from TUSIMPLE GitHub repository, some preprocess is needed to prepare the dataset for training and testing.
-
-1. Process the ``train_set`` split into ground truth image, binary ground truth and instance ground truth, you should run
+Process the ``train_set`` split into ground truth image, binary ground truth and instance ground truth. We run the following command in Terminal:
 
 ```
-python utils/process_train_set.py --src_dir (your train_set folder place)
-for me this step is: python utils/process_training_dataset_2.py --src_dir /Users/smiffy/Documents/GitHub/ECBM6040-Project/TUSIMPLE/train_set
+python3 utils/process_train_set.py --src_dir /path/to/your/extracted/train_set
 ```
 
-2. Then you can delete the folder ``ECBM6040-Project/TUSIMPLE/train_set`` and json files in ``ECBM6040-Project/TUSIMPLE/training``
+The ``src_dir`` is your local directory, where the ``train_set`` was previously extracted.
 
-3. You should see some folder like that in your ``train_set``
+We can now delete the folder ``Lane_Detection_PyTorch/TUSIMPLE/train_set`` and json files in ``Lane_Detection_PyTorch/TUSIMPLE/training``
+
+Let us have a look on ``TUSIMPLE/`` folder to find out how should it look like now:
 ```
-ECBM6040-Project
+Lane_Detection_PyTorch
 |---TUSIMPLE
-.   |---Lanenet_output
-.   |   |--lanenet_epoch_39_batch_8.model
-.   |
-.   |---training
-.   |   |--lgt_binary_image
-.   |   |--gt_image
-.   |   |--gt_instance_image
-.   |
-.   |---txt_for_local
-.   |   |--test.txt
-.   |   |--train.txt
-.   |   |--val.txt
-.   |
-.   |---test_set
-.   |   |--clips
-.   |   |--test_tasks_0627.json
-.   |   |--test_label.json
-.   |   |--readme.md
-.   |
-.   |---test_clips
+    |---Lanenet_output
+    |   |--lanenet_epoch_39_batch_8.model
+    |   |--lanenet_epoch_39_batch_8_AUG.model
+    |   |--lanenet_epoch_38_batch_8_AUG.model
+    |
+    |---training
+    |   |--lgt_binary_image
+    |   |--gt_image
+    |   |--gt_instance_image
+    |
+    |---txt_for_local
+    |   |--test.txt
+    |   |--train.txt
+    |   |--val.txt
+    |
+    |---test_set
+    |   |--clips
+    |   |--test_tasks_0627.json
+    |   |--test_label.json
+    |   |--readme.md
+    |
+    |---test_clips
 ```
 
-***For the data prepare you can reference [LaneNet TensorFlow project](https://github.com/MaybeShewill-CV/lanenet-lane-detection) but there is some different.***
-___
 ## Training the E-Net base LaneNet
 1. Dataset for training: You can use ``ECBM6040-Project/Notebook-experiment/Dataset Show.ipynb`` to see the dataset for training
 2. Use the ``ECBM6040-Project/Train.ipynb`` to train the LaneNet, the model will save in ``ECBM6040-Project/TUSIMPLE/Lanenet_output``
