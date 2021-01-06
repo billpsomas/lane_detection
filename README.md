@@ -64,7 +64,7 @@ Moreover:
 ## Prepare TUSIMPLE dataset
 After we have downloaded the dataset from TUSIMPLE GitHub repository, some preprocess is needed to prepare the dataset for training and testing.
 
-Process the ``train_set`` split into ground truth image, binary ground truth and instance ground truth. We run the following command in Terminal:
+We process the ``train_set`` and split it into ground truth images, binary ground truth images and instance ground truth images. Those images are stored into respective folders. We run the following file in Terminal:
 
 ```
 python3 utils/process_train_set.py --src_dir /path/to/your/extracted/train_set
@@ -102,7 +102,16 @@ Lane_Detection_PyTorch
     |---test_clips
 ```
 
-## Training the E-Net base LaneNet
+## Visualize TUSIMPLE dataset
+Let us have a look on TUSIMPLE dataset. We run the following file in Terminal:
+
+``python3 dataset/visualize_dataset.py``
+
+This file is creating a ``dataset/samples`` folder, in which it saves some sample images (original, binary lane segmentation, instance segmentation).
+
+
+
+## Train LaneNet
 1. Dataset for training: You can use ``ECBM6040-Project/Notebook-experiment/Dataset Show.ipynb`` to see the dataset for training
 2. Use the ``ECBM6040-Project/Train.ipynb`` to train the LaneNet, the model will save in ``ECBM6040-Project/TUSIMPLE/Lanenet_output``
 3. You can also train the LaneNet with augmented dataset by using ``ECBM6040-Project/Train_aug.ipynb``
