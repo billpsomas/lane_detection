@@ -127,12 +127,22 @@ Instance Segmentation Image
 <p align="center">
 <img src="dataset/samples/instance_sample_image.png"class="center">
 
+Notice that when building the dataset for visualization, ```dataset_utils.py``` has two different options:
+1. ``TUSIMPLE`` corresponds to the original dataset
+2. ``TUSIMPLE_AUG`` corresponds to the augmented dataset
+
+Play with the visualizations in order to gain good insight on dataset and augmentation.
+
 ## Train LaneNet
-1. Dataset for training: You can use ``ECBM6040-Project/Notebook-experiment/Dataset Show.ipynb`` to see the dataset for training
-2. Use the ``ECBM6040-Project/Train.ipynb`` to train the LaneNet, the model will save in ``ECBM6040-Project/TUSIMPLE/Lanenet_output``
-3. You can also train the LaneNet with augmented dataset by using ``ECBM6040-Project/Train_aug.ipynb``
-___
-## Do evaluation on the test dataset
+We train LaneNet on TUSIMPLE dataset by running:
+
+``python3 train.py``
+
+This will save the trained model on ``TUSIMPLE/Lanenet_output``.
+
+Notice that there is a chance to either train the network using the augmented or non-augmented data. The choice is yours. Uncomment the respective lines in code to do what you prefer. 
+
+## Evaluate LaneNet on test set
 The evaluation base on TuSimple challenge evaluation method you can get more information from [TuSimple exampe](https://github.com/TuSimple/tusimple-benchmark/blob/master/example/lane_demo.ipynb)
 1. You can use the jupyter notebook ``ECBM6040-Project/Notebook-experiment/Evaluation of Lanenet.ipynb`` to see the evaluation result
 2. The final evaluation result is like that:
