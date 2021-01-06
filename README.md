@@ -113,13 +113,19 @@ This file is creating a ``dataset/samples`` folder, in which it saves some sampl
 Original Sample Image
 </h4>
 <p align="center">
-<img src="dataset/samples/sample_image.png"class="left">
+<img src="dataset/samples/sample_image.png"class="center">
 
 <h3 align="center">
 Binary Lane Segmentation Image
 </h4>
 <p align="center">
 <img src="dataset/samples/binary_sample_image.png"class="center">
+
+<h3 align="center">
+Instance Segmentation Image
+</h4>
+<p align="center">
+<img src="dataset/samples/instance_sample_image.png"class="center">
 
 ## Train LaneNet
 1. Dataset for training: You can use ``ECBM6040-Project/Notebook-experiment/Dataset Show.ipynb`` to see the dataset for training
