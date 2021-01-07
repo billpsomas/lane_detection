@@ -179,8 +179,15 @@ Authors use the ``NVIDIA 1080 Ti``, while we use the ``RTX 3070``.
 
 Use the ``ECBM6040-Project/Notebook-experiment/Generate Video and show the result.ipynb``, you can generate some gif to show the result on some clips in ``ECBM6040-Project/TUSIMPLE/test_clips`` and output gif will find in ``ECBM6040-Project/TUSIMPLE/gif_output``
 -->
+## Visualize results
 
 ![sample_image](TUSIMPLE/test_clips/groundtruths/sample_image.png)
+![binary_groundtruth_sample_image](TUSIMPLE/test_clips/groundtruths/binary_groundtruth_sample_image.png)
+![binary_prediction_sample_image](TUSIMPLE/test_clips/predictions/binary_prediction_sample_image.png)
+![instance_groundtruth_sample_image](TUSIMPLE/test_clips/groundtruths/instance_groundtruth_sample_image.png)
+![instance_prediction_sample_image](TUSIMPLE/test_clips/predictions/instance_prediction_sample_image.png)
+![final_detection_sample_image](TUSIMPLE/test_clips/predictions/final_detection_sample_image.png)
+
 
 <!--
 ___
