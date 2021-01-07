@@ -180,7 +180,7 @@ Authors use the ``NVIDIA 1080 Ti``, while we use the ``RTX 3070``.
 Use the ``ECBM6040-Project/Notebook-experiment/Generate Video and show the result.ipynb``, you can generate some gif to show the result on some clips in ``ECBM6040-Project/TUSIMPLE/test_clips`` and output gif will find in ``ECBM6040-Project/TUSIMPLE/gif_output``
 -->
 
-![sample_image](test_clips/groundtruths/sample_image.png)
+![sample_image](TUSMIPLE/test_clips/groundtruths/sample_image.png)
 
 <!--
 ___
