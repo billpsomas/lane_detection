@@ -105,7 +105,9 @@ Lane_Detection_PyTorch
 ## Visualize TUSIMPLE dataset
 Let us have a look on TUSIMPLE dataset. We run the following file in Terminal:
 
-``python3 dataset/visualize_dataset.py``
+```
+python3 dataset/visualize_dataset.py
+```
 
 This file is creating a ``dataset/samples`` folder, in which it saves some sample images (original, binary lane segmentation, instance segmentation).
 
@@ -136,14 +138,16 @@ Play with the visualizations in order to gain good insight on dataset and augmen
 ## Train LaneNet
 We train LaneNet on TUSIMPLE dataset by running:
 
-``python3 train.py``
+```
+python3 train.py
+```
 
 This will save the trained model on ``TUSIMPLE/Lanenet_output``.
 
-Notice that there is a chance to either train the network using the augmented or non-augmented data. The choice is yours. Uncomment the respective lines in code to do what you prefer. 
+Notice that there is a chance to either train the network using the augmented or non-augmented data. The choice is yours. Uncomment the respective lines in code to do whatever you prefer. 
 
 ## Evaluate LaneNet on test set
-The evaluation base on TuSimple challenge evaluation method you can get more information from [TuSimple exampe](https://github.com/TuSimple/tusimple-benchmark/blob/master/example/lane_demo.ipynb)
+Information about the official TUSIMPLE evaluation method you can get more information from [TuSimple exampe](https://github.com/TuSimple/tusimple-benchmark/blob/master/example/lane_demo.ipynb)
 1. You can use the jupyter notebook ``ECBM6040-Project/Notebook-experiment/Evaluation of Lanenet.ipynb`` to see the evaluation result
 2. The final evaluation result is like that:
 
