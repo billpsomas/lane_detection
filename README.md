@@ -165,22 +165,14 @@ The accuracy metrics are reported below:
 | Our Results    |   94.27%   | 0.1479  |  0.7129 |
 | Our Aug Results|   94.72%   | 0.1328  |  0.6248 |
 
-3. The speed result is like that:
+The duration metrics are reported bleow:
 
-**Original Paper** : fps is 62.5 ``(one NVIDIA 1080 TI)``
+|               | Authors Time (ms)| Our Time (ms)| Authors FPS| Our FPS|
+|:--------------|:-----------------|:-------------|:-----------|:-------|
+| Forward Pass  | 12.0             | 23.9         |62.5        |41.8    |
+| Clustering    | 4.6              | 66.09        |62.5        |15.1    |
 
-|               | time (ms)|
-|:--------------|:---------|
-| Forward pass  | 12       |
-| Clustering    | 4.6      |
-
-**My Result** : fps is 20(forward), 1.6(clustering) ``(Google Cloud Platform and one  NVIDIA Tesla P100 GPU and clustering use CPU)``
-
-|               | time (ms)|
-|:--------------|:---------|
-| Forward pass  | 50       |
-| Clustering    | 619      |
-
+Authors use the ``NVIDIA 1080 Ti``, while we use the ``RTX 3070``.
 ___
 ## Generate some GIF to show the result
 
