@@ -147,15 +147,24 @@ This will save the trained model on ``TUSIMPLE/Lanenet_output``.
 Notice that there is a chance to either train the network using the augmented or non-augmented data. The choice is yours. Uncomment the respective lines in code to do whatever you prefer. 
 
 ## Evaluate LaneNet on test set
-Information about the official TUSIMPLE evaluation method you can get more information from [TuSimple exampe](https://github.com/TuSimple/tusimple-benchmark/blob/master/example/lane_demo.ipynb)
-1. You can use the jupyter notebook ``ECBM6040-Project/Notebook-experiment/Evaluation of Lanenet.ipynb`` to see the evaluation result
-2. The final evaluation result is like that:
+Information about the official TUSIMPLE evaluation method can be seen in the [TUSIMPLE evaluation example](https://github.com/TuSimple/tusimple-benchmark/blob/master/example/lane_demo.ipynb).
 
-|               | Accuracy |    FP   |    FN   |
-|:--------------|:---------|:--------|:--------|
-| Original Paper| 96.4%    | 7.80%   |  2.44%  |  
-| My result     | 94.3%    | 14.70%  |  6.95%  |
-| My result aug | 94.7%    | 15.08%  |  6.24%  |
+We evaluate LaneNet by running:
+
+```
+python3 evaluate.py
+```
+
+Notice that we first load the model previously trained and then evaluate it both using accuracy and duration metrics.
+
+The accuracy metrics are reported below:
+
+|                | Accuracy(%)|    FP   |    FN   |
+|:-------------- |:-----------|:--------|:--------|
+| Authors        |   96.40    | 0.0780  |  0.0244 |  
+| Our Results    |   94.27    | 0.1479  |  0.7129 |
+| Our Aug Results|   94.72    | 0.1328  |  0.6248 |
+
 3. The speed result is like that:
 
 **Original Paper** : fps is 62.5 ``(one NVIDIA 1080 TI)``
