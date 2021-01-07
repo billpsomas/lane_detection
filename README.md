@@ -159,11 +159,11 @@ Notice that we first load the model previously trained and then evaluate it both
 
 The accuracy metrics are reported below:
 
-|                | Accuracy(%)|    FP   |    FN   |
+|                | Accuracy   |    FP   |    FN   |
 |:-------------- |:-----------|:--------|:--------|
-| Authors        |   96.40    | 0.0780  |  0.0244 |  
-| Our Results    |   94.27    | 0.1479  |  0.7129 |
-| Our Aug Results|   94.72    | 0.1328  |  0.6248 |
+| Authors        |   96.40%   | 0.0780  |  0.0244 |  
+| Our Results    |   94.27%   | 0.1479  |  0.7129 |
+| Our Aug Results|   94.72%   | 0.1328  |  0.6248 |
 
 3. The speed result is like that:
 
