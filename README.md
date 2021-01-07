@@ -173,12 +173,16 @@ The duration metrics are reported bleow:
 | Clustering    | 4.6              | 66.09        |62.5        |15.1    |
 
 Authors use the ``NVIDIA 1080 Ti``, while we use the ``RTX 3070``.
-___
+
+<!--
 ## Generate some GIF to show the result
 
 Use the ``ECBM6040-Project/Notebook-experiment/Generate Video and show the result.ipynb``, you can generate some gif to show the result on some clips in ``ECBM6040-Project/TUSIMPLE/test_clips`` and output gif will find in ``ECBM6040-Project/TUSIMPLE/gif_output``
+-->
 
-![gif show](img/result_show.gif)
+![sample_image](test_clips/groundtruths/sample_image.png)
+
+<!--
 ___
 ## Reference
 [1] Neven, D., De Brabandere, B., Georgoulis, S., Proesmans, M. and Van Gool, L., 2018, June. Towards end-to-end lane 
@@ -190,3 +194,4 @@ https://arxiv.org/abs/1802.05591
 [3] TuSimple Dataset https://github.com/TuSimple/tusimple-benchmark
 
 [4] E-Net Project https://github.com/davidtvs/PyTorch-ENet
+-->
