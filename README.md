@@ -202,12 +202,32 @@ Lane_Detection_PyTorch
 Original Sample Image
 </h4>
 <p align="center">
-<img src="TUSIMPLE/test_clips/sample_image.png"class="center">
+<img src="TUSIMPLE/test_clips/groundtruths/sample_image.png"class="center">
 <h3 align="center">
 Binary Lane Segmentation Groundtruth Image
 </h4>
 <p align="center">
-<img src="TUSIMPLE/test_clips/binary_groundtruth_sample_image.png"class="center">
+<img src="TUSIMPLE/test_clips/groundtruths/binary_groundtruth_sample_image.png"class="center">
+<h3 align="center">
+Instance Segmentation Groundtruth Image
+</h4>
+<p align="center">
+<img src="TUSIMPLE/test_clips/groundtruths/instance_groundtruth_sample_image.png"class="center">
+<h3 align="center">
+Binary Lane Segmentation Prediction Image
+</h4>
+<p align="center">
+<img src="TUSIMPLE/test_clips/predictions/binary_prediction_sample_image.png"class="center">
+<h3 align="center">
+Instance Segmentation Prediction Image
+</h4>
+<p align="center">
+<img src="TUSIMPLE/test_clips/predictions/instance_prediction_sample_image.png"class="center">
+<h3 align="center">
+Final Detection Image
+</h4>
+<p align="center">
+<img src="TUSIMPLE/test_clips/predictions/final_detection_sample_image.png"class="center">
 
 
 
