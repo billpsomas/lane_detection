@@ -224,12 +224,22 @@ Instance Segmentation Prediction Image
 <p align="center">
 <img src="TUSIMPLE/test_clips/predictions/instance_prediction_sample_image.png"class="center">
 <h3 align="center">
-Final Detection Image
+Final Lane Detection Image
 </h4>
 <p align="center">
 <img src="TUSIMPLE/test_clips/predictions/final_detection_sample_image.png"class="center">
 
-
+## Generate video
+We also generate a GIF for better visualization by running:
+```
+python generate_video.py
+```
+The ouput of this file is saved in `TUSIMPLE/gif_output` directory. An example video is showed below:
+<h3 align="center">
+Final Lane Detection GIF
+</h4>
+<p align="center">
+<img src="TUSIMPLE/gif_output/clip_1.gif"class="center">
 
 <!--
 ___
