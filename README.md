@@ -50,7 +50,7 @@ ___
 * [ujson](https://github.com/ultrajson/ultrajson)
 
 ## Install requirements
-In order to install requirements run ``pip3 install -r requirements.txt``
+In order to install requirements run ``pip install -r requirements.txt``
 
 ## Download TUSIMPLE dataset
 Firstly, we have to download the Lane Detection Challenge dataset from [TUSIMPLE](https://github.com/TuSimple/tusimple-benchmark/issues/3) GitHub repository.
@@ -67,7 +67,7 @@ After we have downloaded the dataset from TUSIMPLE GitHub repository, some prepr
 We process the ``train_set`` and split it into ground truth images, binary ground truth images and instance ground truth images. Those images are stored into respective folders. We run the following file in Terminal:
 
 ```
-python3 utils/process_train_set.py --src_dir /path/to/your/extracted/train_set
+python utils/process_train_set.py --src_dir /path/to/your/extracted/train_set
 ```
 
 The ``src_dir`` is your local directory, where the ``train_set`` was previously extracted.
@@ -106,7 +106,7 @@ Lane_Detection_PyTorch
 Let us have a look on TUSIMPLE dataset. We run the following file in Terminal:
 
 ```
-python3 dataset/visualize_dataset.py
+python dataset/visualize_dataset.py
 ```
 
 This file is creating a ``dataset/samples`` folder, in which it saves some sample images (original, binary lane segmentation, instance segmentation).
@@ -139,7 +139,7 @@ Play with the visualizations in order to gain good insight on dataset and augmen
 We train LaneNet on TUSIMPLE dataset by running:
 
 ```
-python3 train.py
+python train.py
 ```
 
 This will save the trained model on ``TUSIMPLE/Lanenet_output``.
@@ -152,7 +152,7 @@ Information about the official TUSIMPLE evaluation method can be seen in the [TU
 We evaluate LaneNet by running:
 
 ```
-python3 evaluate.py
+python evaluate.py
 ```
 
 Notice that we first load the model previously trained and then evaluate it both using accuracy and duration metrics.
@@ -180,13 +180,35 @@ Authors use the ``NVIDIA 1080 Ti``, while we use the ``RTX 3070``.
 Use the ``ECBM6040-Project/Notebook-experiment/Generate Video and show the result.ipynb``, you can generate some gif to show the result on some clips in ``ECBM6040-Project/TUSIMPLE/test_clips`` and output gif will find in ``ECBM6040-Project/TUSIMPLE/gif_output``
 -->
 ## Visualize results
+We visualize results by running:
+```
+python visualize_results.py
+```
+This file outputs the following images, which are saved in the `TUSIMPLE/test_clips` as:
+```
+Lane_Detection_PyTorch
+|---TUSIMPLE
+    |---test_clips
+    |   |---groundthruths
+            |--sample_image.png
+            |--binary_groundtruth_sample_image.png
+            |--instance_segmentation_sample_image.png
+        |---predictions
+            |--binary_prediction_sample_image.png
+            |--instance_prediction_sample_image.png
+            |--final_detection_sample_image.png
+```
+<h3 align="center">
+Original Sample Image
+</h4>
+<p align="center">
+<img src="TUSIMPLE/test_clips/sample_image.png"class="center">
+<h3 align="center">
+Binary Lane Segmentation Groundtruth Image
+</h4>
+<p align="center">
+<img src="TUSIMPLE/test_clips/binary_groundtruth_sample_image.png"class="center">
 
-![sample_image](TUSIMPLE/test_clips/groundtruths/sample_image.png)
-![binary_groundtruth_sample_image](TUSIMPLE/test_clips/groundtruths/binary_groundtruth_sample_image.png)
-![binary_prediction_sample_image](TUSIMPLE/test_clips/predictions/binary_prediction_sample_image.png)
-![instance_groundtruth_sample_image](TUSIMPLE/test_clips/groundtruths/instance_groundtruth_sample_image.png)
-![instance_prediction_sample_image](TUSIMPLE/test_clips/predictions/instance_prediction_sample_image.png)
-![final_detection_sample_image](TUSIMPLE/test_clips/predictions/final_detection_sample_image.png)
 
 
 <!--
