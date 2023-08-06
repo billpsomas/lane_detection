@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from torch_scatter import scatter
-
+# from torch_scatter import scatter
+from Lanenet.scatter_impl import scatter
 
 class cluster_loss_helper(nn.Module):
     def __init__(self):

@@ -19,9 +19,9 @@ test_set = TUSIMPLE(root=root, flag='test')
 
 # In case you want to run using the augmented dataset
 # uncomment the following lines
-train_set = TUSIMPLE_AUG(root=root, flag='train')
-valid_set = TUSIMPLE_AUG(root=root, flag='valid')
-test_set = TUSIMPLE_AUG(root=root, flag='test')
+# train_set = TUSIMPLE_AUG(root=root, flag='train')
+# valid_set = TUSIMPLE_AUG(root=root, flag='valid')
+# test_set = TUSIMPLE_AUG(root=root, flag='test')
 
 # Print the number of samples of each set
 print('train_set length {}'.format(len(train_set)))
