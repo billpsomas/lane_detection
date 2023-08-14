@@ -58,7 +58,7 @@ class HNet(nn.Module):
         self.block3 = BasicBlock(32,64)
         self.pool = nn.MaxPool2d(2)
 
-        self.head = nn.Sequential(nn.Linear(9216, 1024),
+        self.head = nn.Sequential(nn.Linear(8192, 1024),
                                   nn.BatchNorm1d(1024),
                                   nn.ReLU(inplace=True),
                                   nn.Linear(1024, 6),)
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     import time
 
     hnet = HNet()
-    x = torch.randn(2,3,128,72)
+    x = torch.randn(2,3,128,64)
 
     startT = time.time()
     out = hnet(x)

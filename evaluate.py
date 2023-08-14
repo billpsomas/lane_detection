@@ -17,6 +17,7 @@ from utils.evaluation import process_instance_embedding, video_to_clips
 # You can use either the simple or augmented
 # Uncomment corresponding line in second case
 model_path = 'TUSIMPLE/Lanenet_output/lanenet_epoch_39_batch_8.model'
+model_path = 'TUSIMPLE/Lanenet_output/lanenet_epoch_29_batch_size_8.model'
 #model_path = 'TUSIMPLE/Lanenet_output/lanenet_epoch_39_batch_8_AUG.model'
 
 # Use GPU if available, else use CPU

@@ -42,19 +42,26 @@ class HNetLoss(_Loss):
 
         :return:
         """
-        self.transformation_coefficient = torch.cat((self.transformation_coefficient, torch.tensor([1.0])),
-                                                    dim=0)
-        H_indices = torch.tensor([0, 1, 2, 4, 5, 7, 8])
-        H_shape = 9
-        H = torch.zeros(H_shape)
-        H.scatter_(dim=0, index=H_indices, src=self.transformation_coefficient)
-        H = H.view((3, 3))
-
+        # if self.usegpu:
+        #     self.transformation_coefficient = torch.cat((self.transformation_coefficient, torch.tensor([1.0]).cuda()),
+        #                                             dim=0)
+        # else:
+        #     self.transformation_coefficient = torch.cat((self.transformation_coefficient, torch.tensor([1.0])),
+        #                                                 dim=0)
+        # H_indices = torch.tensor([0, 1, 2, 4, 5, 7, 8])
+        # H_shape = 9
+        # H = torch.zeros(H_shape)
+        # H.scatter_(dim=0, index=H_indices, src=self.transformation_coefficient)
+        # H = H.view((3, 3))
+        H = self.transformation_coefficient
         pts_projects = torch.matmul(H, self.gt_pts.t())
 
         Y = pts_projects[1, :]
         X = pts_projects[0, :]
-        Y_One = torch.ones(Y.size())
+        if self.usegpu:
+            Y_One = torch.ones(Y.size()).cuda()
+        else:
+            Y_One = torch.ones(Y.size())
         Y_stack = torch.stack((torch.pow(Y, 3), torch.pow(Y, 2), Y, Y_One), dim=1).squeeze()
         w = torch.matmul(torch.matmul(torch.inverse(torch.matmul(Y_stack.t(), Y_stack)),
                                       Y_stack.t()),
