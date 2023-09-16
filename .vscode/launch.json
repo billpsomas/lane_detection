@@ -40,6 +40,18 @@
             "program": "${workspaceFolder}/hnet_train.py",
             "console": "integratedTerminal",
             "justMyCode": true,
+        },
+        {
+            "name": "pre_train_v2",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/Hnet/train_hnet_v2.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--data_set_dir", "/home/talg/Downloads/train_set",
+                "--phase", "pretrain"
+            ]
         }
     ]
 }
