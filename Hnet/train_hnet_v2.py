@@ -3,9 +3,11 @@ import cv2
 import time
 import glob
 import torch
+import pickle
 import argparse
 import numpy as np
 from torch.autograd import Variable
+from matplotlib import pyplot as plt
 
 import hnet_data_processor
 from hnet_model import HNet
@@ -81,8 +83,10 @@ def train(args):
         else:
             print("No pretrain hnet weights")
         pre_train_loss = PreTrainHnetLoss()
+        epochs_loss = []
         for epoch in range(1, epochs+1):
             start_time = time.time()
+            curr_epoch_loss_list = []
             for i, (gt_images, gt_lane_points) in enumerate(data_loader_train):
                 gt_images = Variable(gt_images).to(device).type(torch.float32)
                 gt_lane_points = Variable(gt_lane_points).to(device)
@@ -93,6 +97,8 @@ def train(args):
                 loss.backward()
                 pre_train_optimizer.step()
 
+                curr_epoch_loss_list.append(loss.item())
+
                 if (i + 1) % 10 == 0:
                     print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}, Time: {:.4f}s'
                           .format(epoch, epochs, i + 1, len(data_loader_train), loss.item(),
@@ -100,12 +106,34 @@ def train(args):
                     start_time = time.time()
 
                 # draw_images(gt_lane_points[0], gt_images[0], transformation_coefficient[0], i)
-                
+
+            epochs_loss.append(np.mean(curr_epoch_loss_list))
+
             if (epoch + 1) % 1 == 0:
                 os.makedirs(args.pre_train_save_dir, exist_ok=True)
                 file_path = os.path.join(
                     args.pre_train_save_dir, 'pre_train_hnet_epoch_{}.pth'.format(epoch))
                 torch.save(hnet_model.state_dict(), file_path)
+
+        # save loss list to a pickle file
+        save_loss_to_pickle(epochs_loss)
+
+
+def save_loss_to_pickle(loss_list: list, pickle_file_path: str = './pre_train_hnet_loss.pkl'):
+    with open(pickle_file_path, 'wb') as f:
+        pickle.dump(loss_list, f)
+
+
+def plot_loss(loss_pickle_file_pah: str = './pre_train_hnet_loss.pkl'):
+    with open(loss_pickle_file_pah, 'rb') as f:
+        loss_list = pickle.load(f)
+    plt.plot(loss_list)
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Pretrain HNet Loss')
+    plt.legend()
+    plt.show()
+
 
 def draw_images(lane_points, image, transformation_coefficient, number):
     points = lane_points[lane_points[:, 2] > 0]
