@@ -10,9 +10,9 @@ from torch.autograd import Variable
 from matplotlib import pyplot as plt
 
 import hnet_data_processor
-from Hnet.hnet_loss import HNetLoss
 from hnet_model import HNet
-from Hnet.hnet_utils import hnet_transformation
+from hnet_loss import HNetLoss
+from hnet_utils import hnet_transformation
 from pre_train_hnet_loss import PreTrainHnetLoss
 
 
@@ -80,7 +80,8 @@ def train(args):
     # # Define number of epochs
     # num_epochs = 20005
 
-    assert args.phase in ['pretrain', 'train', 'full_train'], "phase must be pretrain, train or full_train"
+    assert args.phase in ['pretrain', 'train',
+                          'full_train'], "phase must be pretrain, train or full_train"
 
     if args.phase == 'pretrain':
         pre_train_hnet(args, data_loader_train, device, hnet_model)
@@ -94,7 +95,8 @@ def train(args):
 def train_hnet(args, data_loader_train, device, hnet_model):
     # Define the optimizer
     params = [p for p in hnet_model.parameters() if p.requires_grad]
-    optimizer = torch.optim.Adam(params, lr=TRAIN_LEARNING_RATE, weight_decay=WEIGTH_DECAY)
+    optimizer = torch.optim.Adam(
+        params, lr=TRAIN_LEARNING_RATE, weight_decay=WEIGTH_DECAY)
     epochs = args.train_epochs
 
     if args.hnet_weights is not None:
@@ -145,7 +147,8 @@ def train_hnet(args, data_loader_train, device, hnet_model):
 def pre_train_hnet(args, data_loader_train, device, hnet_model):
     # Define the optimizer
     params = [p for p in hnet_model.parameters() if p.requires_grad]
-    optimizer = torch.optim.Adam(params, lr=PRE_TRAIN_LEARNING_RATE, weight_decay=WEIGTH_DECAY)
+    optimizer = torch.optim.Adam(
+        params, lr=PRE_TRAIN_LEARNING_RATE, weight_decay=WEIGTH_DECAY)
     epochs = args.pre_train_epochs
 
     if args.pre_hnet_weights is not None:
@@ -177,7 +180,9 @@ def pre_train_hnet(args, data_loader_train, device, hnet_model):
                               time.time() - start_time))
                 start_time = time.time()
 
-            draw_images(gt_lane_points[0], gt_images[0], transformation_coefficient[0], i)
+            draw_images(gt_lane_points[0], gt_images[0],
+                        transformation_coefficient[0], "pre_train", i, 
+                        args.pre_train_save_dir)
 
         epochs_loss.append(np.mean(curr_epoch_loss_list))
 
@@ -206,22 +211,47 @@ def plot_loss(loss_pickle_file_pah: str = './pre_train_hnet_loss.pkl'):
     plt.show()
 
 
-def draw_images(lane_points, image, transformation_coefficient, number):
+def draw_images(lane_points: torch.tensor, image: torch.tensor, transformation_coefficient,
+                prefix_name, number, output_path):
     """
     Draw the lane points on the src image
-    :param lane_points: the lane points of the src image (single image)
-    :param image: the src image
-    :param transformation_coefficient: the transformation coefficient of the src image (single image)
+    :param lane_points: the lane points of the src image (single image) (k, 3)
+    :param image: the src image (3, H, W)
+    :param transformation_coefficient: the transformation coefficient of the src image (6)
     :param number: the number of the src image (index)
     """
     points = lane_points[lane_points[:, 2] > 0]
-    x_transformation_back, H, pts_projects_nomalized = hnet_transformation(
+    pred_transformation_back, H, pts_projects_nomalized = hnet_transformation(
         input_pts=points.unsqueeze(dim=0), transformation_coefficient=transformation_coefficient.unsqueeze(dim=0))
-    # draw gt lane on src image 
-    src_image = image.transpose(1, 2, 0).numpy()
-    for i in range(points.shape[1]):
-        cv2.circle(src_image, (int(points[0, i]), int(points[1, i])), 5, (0, 0, 255), -1)
-    cv2.imwrite(f"pre_train_hnet_save_number_{number}_src.png", src_image)
+    src_image = image.permute(1, 2, 0).cpu().numpy().astype(np.uint8).copy()
+    # draw the points on the src image
+    image_for_points = src_image.copy()
+    for point in points:
+        center = (int(point[0]), int(point[1]))
+        cv2.circle(image_for_points, center, 1, (0, 0, 255), -1)
+    # draw the trasnformed back points on the src image
+    image_for_transformed_back_points = src_image.copy()
+    pred_transformation_back_permuted = pred_transformation_back.permute(
+        0, 2, 1)
+    for point in pred_transformation_back_permuted[0]:
+        center = (int(point[0]), int(point[1]))
+        cv2.circle(image_for_transformed_back_points,
+                   center, 1, (0, 0, 255), -1)
+    # draw the projected to bev image with lane
+    # TODO maybe mid training in produce poor results?
+    R = H[0].detach().cpu().numpy()
+    pts_projects_nomalized_permuted = pts_projects_nomalized.permute(0, 2, 1)
+    warp_image = cv2.warpPerspective(src_image, R, dsize=(
+        src_image.shape[1], src_image.shape[0]))
+    for point in pts_projects_nomalized_permuted[0]:
+        center = (int(point[0]), int(point[1]))
+        cv2.circle(warp_image, center, 1, (0, 0, 255), -1)
+    # save the images
+    os.makedirs(output_path, exist_ok=True)
+    cv2.imwrite(
+        f"{output_path}/{prefix_name}_{number}_src.png", image_for_points)    cv2.imwrite(
+        f"{output_path}/{prefix_name}_{number}_transformed_back.png", image_for_transformed_back_points)
+    cv2.imwrite(f"{output_path}/{prefix_name}_{number}_warp.png", warp_image)
 
 
 if __name__ == '__main__':

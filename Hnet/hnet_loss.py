@@ -5,7 +5,7 @@ from torch.functional import F
 from torch.autograd import Variable
 from torch.nn.modules.loss import _Loss
 
-from Hnet.hnet_utils import hnet_transformation
+from hnet_utils import hnet_transformation
 
 
 class HNetLoss(_Loss):
