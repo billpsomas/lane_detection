@@ -102,7 +102,8 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     import random
     import time
-    train_data_set_path = '/home/talg/Downloads/train_set'
+    # train_data_set_path = '/home/talg/Downloads/train_set'
+    train_data_set_path = '/home/tomer/Downloads/EE_master/Deep_Learning/Lane_Detection_Using_Perspective_Transformation_project/TUSimple/train_set'
     train_data_set = TusimpleForHnetDataSet(train_data_set_path)
     print("len(train_data_set): ", len(train_data_set))
 
