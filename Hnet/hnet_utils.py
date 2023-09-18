@@ -67,7 +67,7 @@ def hnet_transformation(input_pts, transformation_coefficient, poly_fit_order: i
     pred_transformation_back = torch.matmul(torch.inverse(H), preds_projects_stack)
 
     # Extra returns for use
-    pts_projects_normalized = pts_projects / pts_projects[:, 2, :]
+    pts_projects_normalized = pts_projects / pts_projects[:, 2, :].unsqueeze(1)
 
     return pred_transformation_back, H, pts_projects_normalized
 

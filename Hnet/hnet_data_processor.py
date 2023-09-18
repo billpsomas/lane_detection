@@ -90,7 +90,7 @@ class TusimpleForHnetDataSet(torch.utils.data.Dataset):
         # resize gt_pts_lane
         width_ratio = self.resize[0] / self.original_shape[1]
         height_ratio = self.resize[1] / self.original_shape[0]
-        gt_pts_lane = np.array(self._label_gt_pts[idx])
+        gt_pts_lane = np.array(self._label_gt_pts[idx], dtype=np.float32)
         gt_pts_lane[:, 0] = gt_pts_lane[:, 0] * width_ratio
         gt_pts_lane[:, 1] = gt_pts_lane[:, 1] * height_ratio
 
@@ -102,8 +102,8 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     import random
     import time
-    # train_data_set_path = '/home/talg/Downloads/train_set'
-    train_data_set_path = '/home/tomer/Downloads/EE_master/Deep_Learning/Lane_Detection_Using_Perspective_Transformation_project/TUSimple/train_set'
+    train_data_set_path = '/home/talg/Downloads/train_set'
+    # train_data_set_path = '/home/tomer/Downloads/EE_master/Deep_Learning/Lane_Detection_Using_Perspective_Transformation_project/TUSimple/train_set'
     train_data_set = TusimpleForHnetDataSet(train_data_set_path)
     print("len(train_data_set): ", len(train_data_set))
 
