@@ -10,9 +10,9 @@ from torch.autograd import Variable
 from matplotlib import pyplot as plt
 
 from hnet_model import HNet
-from hnet_loss_v2 import PreTrainHnetLoss, TrainHetLoss
 from hnet_utils import hnet_transformation
 from hnet_data_processor import TusimpleForHnetDataSet
+from hnet_loss_v2 import PreTrainHnetLoss, TrainHetLoss, PRE_H
 
 PRE_TRAIN_LEARNING_RATE = 1e-4
 TRAIN_LEARNING_RATE = 5e-5
@@ -73,7 +73,6 @@ def train(args):
     # lr_scheduler = torch.optim.lr_scheduler.StepLR(
     #     optimizer, step_size=10, gamma=0.1)
 
-
     assert args.phase in ['pretrain', 'train',
                           'full_train'], "phase must be pretrain, train or full_train"
 
@@ -108,9 +107,11 @@ def train_hnet(args, data_loader_train, device, hnet_model):
     os.makedirs(weights_dir_path, exist_ok=True)
 
     epochs_loss = []
+    epochs_loss_validation, epochs_loss_validation_fixed = [], []
     for epoch in range(1, epochs + 1):
         start_time = time.time()
         curr_epoch_loss_list = []
+        curr_epoch_validation_loss_list, curr_epoch_validation_loss_fixed_list = [], []
         for i, (gt_images, gt_lane_points) in enumerate(data_loader_train):
             gt_images = Variable(gt_images).to(device).type(torch.float32)
             gt_lane_points = Variable(gt_lane_points).to(device)
@@ -127,6 +128,11 @@ def train_hnet(args, data_loader_train, device, hnet_model):
             transformation_coefficient = hnet_model(gt_images)
             loss = train_loss(gt_lane_points, transformation_coefficient)
 
+            # validation phase # todo we should have validation loader as well and not use the train loader here
+            val_images = gt_images  # todo: change to validation set
+            val_lane_points = gt_lane_points  # todo: change to validation set
+            eval_loss, eval_loss_fixed = evaluate_hnet_on_single_batch(val_images, val_lane_points, device,
+                                                                       hnet_model, PRE_H)
             # todo: handle cases of nan Hnet output
             if loss == -1:
                 continue
@@ -135,23 +141,65 @@ def train_hnet(args, data_loader_train, device, hnet_model):
             optimizer.step()
 
             curr_epoch_loss_list.append(loss.item())
+            curr_epoch_validation_loss_list.append(eval_loss.item())
+            if eval_loss_fixed is not None:
+                curr_epoch_validation_loss_fixed_list.append(eval_loss_fixed.item())
 
             if (i + 1) % 10 == 0:
-                print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}, Time: {:.4f}s'
+                print('Epoch [{}/{}], Step [{}/{}], loss: {:.4f}, Time: {:.4f}s'
                       .format(epoch, epochs, i + 1, len(data_loader_train), loss.item(),
                               time.time() - start_time))
-                start_time = time.time()
+                start_time = time.time()  # todo time now takes the time of the validation phase as well so it's not accurate
+                print(f'                         eval loss: {eval_loss.item():.4f}')
+                if eval_loss_fixed is not None:
+                    print(f'                   fixed eval loss: {eval_loss_fixed.item():.4f}')
 
             # draw_images(gt_lane_points[0], gt_images[0], transformation_coefficient[0], i)
 
         epochs_loss.append(np.mean(curr_epoch_loss_list))
+        epochs_loss_validation.append(np.mean(curr_epoch_validation_loss_list))
+        if len(curr_epoch_validation_loss_fixed_list) > 0:
+            epochs_loss_validation_fixed.append(np.mean(curr_epoch_validation_loss_fixed_list))
 
         if epoch % 1 == 0:
             file_path = os.path.join(
                 weights_dir_path, f'{args.phase}_hnet_epoch_{epoch}.pth')
             torch.save(hnet_model.state_dict(), file_path)
     # save loss list to a pickle file
-    save_loss_to_pickle(epochs_loss, pickle_file_path = './train_hnet_loss.pkl')
+    save_loss_to_pickle(epochs_loss, pickle_file_path='./train_hnet_loss.pkl')
+    save_loss_to_pickle(epochs_loss_validation, pickle_file_path='./train_hnet_validation_loss.pkl')
+    save_loss_to_pickle(epochs_loss_validation_fixed,
+                        pickle_file_path='./train_hnet_validation_loss_fixed.pkl')
+
+
+def evaluate_hnet_on_single_batch(eval_images, eval_lane_points, device, hnet_model: HNet,
+                                  fixed_transformation_coefficient=None):
+    """
+    Evaluate the hnet model on the evaluation frames
+    :param eval_images: the evaluation images
+    :param eval_lane_points: the evaluation lane points
+    :param device: the device to use
+    :param hnet_model: the current hnet model
+    :param fixed_transformation_coefficient: the pre transformation coefficient
+    """
+    hnet_model.eval()
+    hnet_model.to(device)
+    train_loss = TrainHetLoss()  # todo maybe share reference to the same loss object as train's?
+    with torch.no_grad():
+        eval_lane_points = Variable(eval_lane_points).to(device)
+        # evaluate the eval loss on the eval set with the current transformation_coefficient
+        eval_images = Variable(eval_images).to(device).type(torch.float32)
+        transformation_coefficient = hnet_model(eval_images)
+        eval_loss = train_loss(eval_lane_points, transformation_coefficient)
+
+        # evaluate the eval loss on the eval set with the known transformation_coefficient
+        eval_loss_pre_fix = None
+        if fixed_transformation_coefficient is not None:
+            # make the pre_transformation_coefficient to be same shape as transformation_coefficient
+            batched_fixed_transformation_coefficient = fixed_transformation_coefficient.repeat(
+                transformation_coefficient.shape[0], 1)
+            eval_loss_pre_fix = train_loss(eval_lane_points, batched_fixed_transformation_coefficient)
+    return eval_loss, eval_loss_pre_fix
 
 
 def pre_train_hnet(args, data_loader_train, device, hnet_model):
@@ -214,7 +262,7 @@ def pre_train_hnet(args, data_loader_train, device, hnet_model):
             # plot loss over epochs and save
             plot_loss(epochs_loss, title='Pretrain HNet Loss', output_path=args.pre_train_save_dir)
     # save loss list to a pickle file
-    save_loss_to_pickle(epochs_loss, pickle_file_path = './pre_train_hnet_loss.pkl')
+    save_loss_to_pickle(epochs_loss, pickle_file_path='./pre_train_hnet_loss.pkl')
 
 
 def save_loss_to_pickle(loss_list: list, pickle_file_path: str = './pre_train_hnet_loss.pkl'):
