@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from torch.nn.modules.loss import _Loss
 
-from hnet_utils import hnet_transformation
+from hnet_utils import hnet_transformation, hnet_single_frame_loss
 
 # Use GPU if available, else use CPU
 device = torch.device(
@@ -42,9 +42,24 @@ class TrainHetLoss(_Loss):
 
     @staticmethod
     def _hnet_loss(input_pts, transformation_coefficient):
-        x_preds_transformation_back, _, _ = hnet_transformation(input_pts, transformation_coefficient, device='cuda')
+        # assert not torch.isnan(transformation_coefficient).any(), "transformation_coefficient is nan"
+        # todo: handle case where transformation_coefficient is nan
+        if torch.isnan(transformation_coefficient).any():
+            print("transformation_coefficient is nan")
+            return -1
 
+        batch_size = input_pts.shape[0]
+        single_frame_losses = []
+        for i in range(batch_size):
+            frame_input_pts = input_pts[i]
+            frame_transformation_coefficient = transformation_coefficient[i]
+            frame_loss = hnet_single_frame_loss(frame_input_pts, frame_transformation_coefficient)
+            single_frame_losses.append(frame_loss)
+
+        # x_preds_transformation_back, _, _ = hnet_transformation(input_pts, transformation_coefficient, device='cuda')
         # compute loss between back-transformed polynomial fit and gt_pts
-        loss = torch.mean(torch.pow(input_pts.t()[0, :] - x_preds_transformation_back[0, :], 2))
+        # loss = torch.mean(torch.pow(input_pts.t()[0, :] - x_preds_transformation_back[0, :], 2))
+
+        loss = torch.mean(torch.stack(single_frame_losses))
 
         return loss

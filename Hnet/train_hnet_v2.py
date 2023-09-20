@@ -100,6 +100,13 @@ def train_hnet(args, data_loader_train, device, hnet_model):
         print("No train hnet weights")
     train_loss = TrainHetLoss()
 
+    # create weights directory
+    if args.phase == 'pretrain':
+        weights_dir_path = args.pre_train_save_dir
+    else:
+        weights_dir_path = args.train_save_dir
+    os.makedirs(weights_dir_path, exist_ok=True)
+
     epochs_loss = []
     for epoch in range(1, epochs + 1):
         start_time = time.time()
@@ -119,6 +126,11 @@ def train_hnet(args, data_loader_train, device, hnet_model):
             optimizer.zero_grad()
             transformation_coefficient = hnet_model(gt_images)
             loss = train_loss(gt_lane_points, transformation_coefficient)
+
+            # todo: handle cases of nan Hnet output
+            if loss == -1:
+                continue
+
             loss.backward()
             optimizer.step()
 
@@ -135,12 +147,11 @@ def train_hnet(args, data_loader_train, device, hnet_model):
         epochs_loss.append(np.mean(curr_epoch_loss_list))
 
         if epoch % 1 == 0:
-            os.makedirs(args.pre_train_save_dir, exist_ok=True)
             file_path = os.path.join(
-                args.pre_train_save_dir, 'pre_train_hnet_epoch_{}.pth'.format(epoch))
+                weights_dir_path, f'{args.phase}_hnet_epoch_{epoch}.pth')
             torch.save(hnet_model.state_dict(), file_path)
     # save loss list to a pickle file
-    save_loss_to_pickle(epochs_loss)
+    save_loss_to_pickle(epochs_loss, pickle_file_path = './train_hnet_loss.pkl')
 
 
 def pre_train_hnet(args, data_loader_train, device, hnet_model):
@@ -156,6 +167,13 @@ def pre_train_hnet(args, data_loader_train, device, hnet_model):
     else:
         print("No pretrain hnet weights")
     pre_train_loss = PreTrainHnetLoss()
+
+    # create weights directory
+    if args.phase == 'pretrain':
+        weights_dir_path = args.pre_train_save_dir
+    else:
+        weights_dir_path = args.train_save_dir
+    os.makedirs(weights_dir_path, exist_ok=True)
 
     epochs_loss = []
     gt_lane_points = None
@@ -188,17 +206,15 @@ def pre_train_hnet(args, data_loader_train, device, hnet_model):
             # 1. save the model
             # 2. draw the images
             # 3. plot the loss
-            os.makedirs(args.pre_train_save_dir, exist_ok=True)
-            file_path = os.path.join(
-                args.pre_train_save_dir, 'pre_train_hnet_epoch_{}.pth'.format(epoch))
+            file_path = os.path.join(weights_dir_path, f'{args.phase}_hnet_epoch_{epoch}.pth')
             torch.save(hnet_model.state_dict(), file_path)
             draw_images(gt_lane_points[0], gt_images[0],
-                        transformation_coefficient[0], "pre_train", epoch,
+                        transformation_coefficient[0], f'{args.phase}', epoch,
                         args.pre_train_save_dir)
             # plot loss over epochs and save
             plot_loss(epochs_loss, title='Pretrain HNet Loss', output_path=args.pre_train_save_dir)
     # save loss list to a pickle file
-    save_loss_to_pickle(epochs_loss)
+    save_loss_to_pickle(epochs_loss, pickle_file_path = './pre_train_hnet_loss.pkl')
 
 
 def save_loss_to_pickle(loss_list: list, pickle_file_path: str = './pre_train_hnet_loss.pkl'):
