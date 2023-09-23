@@ -17,6 +17,7 @@ from hnet_loss_v2 import PreTrainHnetLoss, HetLoss, PRE_H
 PRE_TRAIN_LEARNING_RATE = 1e-4
 TRAIN_LEARNING_RATE = 5e-5
 WEIGHT_DECAY = 0.0002
+PRINT_EVERY_N_BATCHES = 100
 
 # Use GPU if available, else use CPU
 device = torch.device(
@@ -85,13 +86,13 @@ def train(args):
     if args.phase == 'pretrain':
         pre_train_hnet(args, data_loader_train, hnet_model)
     elif args.phase == 'train':
-        train_hnet(args, data_loader_train, hnet_model)
+        train_hnet(args, data_loader_train, data_loader_validation, hnet_model)
     else:
         pre_train_hnet(args, data_loader_train, device, hnet_model)
-        train_hnet(args, data_loader_train, hnet_model)
+        train_hnet(args, data_loader_train, data_loader_validation, hnet_model)
 
 
-def train_hnet(args, data_loader_train, hnet_model):
+def train_hnet(args, data_loader_train, data_loader_validation, hnet_model):
     # Define the optimizer
     params = [p for p in hnet_model.parameters() if p.requires_grad]
     optimizer = torch.optim.Adam(
@@ -121,13 +122,13 @@ def train_hnet(args, data_loader_train, hnet_model):
         epochs_loss.append(mean_epoch_train_loss)
 
         # evaluate one epoch
-        mean_epoch_eval_hnet_loss = eval_one_epoch(data_loader_eval, epoch, num_epochs, hnet_loss_function,
+        mean_epoch_eval_hnet_loss = eval_one_epoch(data_loader_validation, epoch, num_epochs, hnet_loss_function,
                                                    eval_fixed_hnet_matrix=False,
                                                    hnet_model=hnet_model,
                                                    fixed_hnet_matrix=None)
         epochs_loss_validation.append(mean_epoch_eval_hnet_loss)
 
-        mean_epoch_eval_fixed_h_loss = eval_one_epoch(data_loader_eval, epoch, num_epochs, hnet_loss_function,
+        mean_epoch_eval_fixed_h_loss = eval_one_epoch(data_loader_validation, epoch, num_epochs, hnet_loss_function,
                                                       eval_fixed_hnet_matrix=True,
                                                       fixed_hnet_matrix=PRE_H)
         epochs_loss_validation_fixed.append(mean_epoch_eval_fixed_h_loss)
@@ -151,7 +152,6 @@ def train_one_epoch(data_loader_train, epoch, epochs, hnet_model, optimizer, hne
     start_time = time.time()
     curr_epoch_loss_list = []
     hnet_model.train()
-    # curr_epoch_validation_loss_list, curr_epoch_validation_loss_fixed_list = [], []
     for i, (gt_images, gt_lane_points) in enumerate(data_loader_train):
         gt_images = Variable(gt_images).to(device).type(torch.float32)
         gt_lane_points = Variable(gt_lane_points).to(device)
@@ -168,11 +168,6 @@ def train_one_epoch(data_loader_train, epoch, epochs, hnet_model, optimizer, hne
         transformation_coefficient = hnet_model(gt_images)
         loss = hnet_loss_function(gt_lane_points, transformation_coefficient)
 
-        # validation phase # todo we should have validation loader as well and not use the train loader here
-        # val_images = gt_images  # todo: change to validation set
-        # val_lane_points = gt_lane_points  # todo: change to validation set
-        # eval_loss, eval_loss_fixed = evaluate_hnet_on_single_batch(val_images, val_lane_points, device,
-        #                                                            hnet_model, PRE_H)
         # todo: handle cases of nan Hnet output
         if loss == -1:
             continue
@@ -181,24 +176,15 @@ def train_one_epoch(data_loader_train, epoch, epochs, hnet_model, optimizer, hne
         optimizer.step()
 
         curr_epoch_loss_list.append(loss.item())
-        # curr_epoch_validation_loss_list.append(eval_loss.item())
-        # if eval_loss_fixed is not None:
-        #     curr_epoch_validation_loss_fixed_list.append(eval_loss_fixed.item())
 
-        if (i + 1) % 10 == 0:
+        if (i + 1) % PRINT_EVERY_N_BATCHES == 0:
             print('Train: Epoch [{}/{}], Step [{}/{}], loss: {:.4f}, Time: {:.4f}s'
                   .format(epoch, epochs, i + 1, len(data_loader_train), loss.item(),
                           time.time() - start_time))
             start_time = time.time()  # todo time now takes the time of the validation phase as well so it's not accurate
-            # print(f'                         eval loss: {eval_loss.item():.4f}')
-            # if eval_loss_fixed is not None:
-            #     print(f'                   fixed eval loss: {eval_loss_fixed.item():.4f}')
 
         # draw_images(gt_lane_points[0], gt_images[0], transformation_coefficient[0], i)
     mean_epoch_loss = np.mean(curr_epoch_loss_list)
-    # epochs_loss_validation.append(np.mean(curr_epoch_validation_loss_list))
-    # if len(curr_epoch_validation_loss_fixed_list) > 0:
-    #     epochs_loss_validation_fixed.append(np.mean(curr_epoch_validation_loss_fixed_list))
 
     return mean_epoch_loss
 
@@ -207,7 +193,6 @@ def eval_one_epoch(data_loader_eval, epoch, epochs, hnet_loss_function, eval_fix
                    hnet_model = None, fixed_hnet_matrix = None):
     start_time = time.time()
     curr_epoch_loss_list = []
-    # curr_epoch_validation_loss_list, curr_epoch_validation_loss_fixed_list = [], []
 
     if eval_fixed_hnet_matrix:
         assert fixed_hnet_matrix is not None, "fixed_hnet_matrix is None but eval_fixed_hnet_matrix is True"
@@ -232,72 +217,28 @@ def eval_one_epoch(data_loader_eval, epoch, epochs, hnet_loss_function, eval_fix
             # 2. run loss batch by batch and not all at once, than average the loss over the batches
 
             if eval_fixed_hnet_matrix:
-                transformation_coefficient = fixed_hnet_matrix
+                transformation_coefficient = fixed_hnet_matrix.repeat(gt_images.shape[0], 1)
             else:
                 transformation_coefficient = hnet_model(gt_images)
 
             loss = hnet_loss_function(gt_lane_points, transformation_coefficient)
 
-            # validation phase # todo we should have validation loader as well and not use the train loader here
-            # val_images = gt_images  # todo: change to validation set
-            # val_lane_points = gt_lane_points  # todo: change to validation set
-            # eval_loss, eval_loss_fixed = evaluate_hnet_on_single_batch(val_images, val_lane_points, device,
-            #                                                            hnet_model, PRE_H)
             # todo: handle cases of nan Hnet output
             if loss == -1:
                 continue
 
             curr_epoch_loss_list.append(loss.item())
-            # curr_epoch_validation_loss_list.append(eval_loss.item())
-            # if eval_loss_fixed is not None:
-            #     curr_epoch_validation_loss_fixed_list.append(eval_loss_fixed.item())
 
-            if (i + 1) % 10 == 0:
+            if (i + 1) % PRINT_EVERY_N_BATCHES == 0:
                 print('Eval {}: Epoch [{}/{}], Step [{}/{}], loss: {:.4f}, Time: {:.4f}s'
                       .format(mode_str, epoch, epochs, i + 1, len(data_loader_eval), loss.item(),
                               time.time() - start_time))
                 start_time = time.time()  # todo time now takes the time of the validation phase as well so it's not accurate
-                # print(f'                         eval loss: {eval_loss.item():.4f}')
-                # if eval_loss_fixed is not None:
-                #     print(f'                   fixed eval loss: {eval_loss_fixed.item():.4f}')
 
         # draw_images(gt_lane_points[0], gt_images[0], transformation_coefficient[0], i)
     mean_epoch_loss = np.mean(curr_epoch_loss_list)
-    # epochs_loss_validation.append(np.mean(curr_epoch_validation_loss_list))
-    # if len(curr_epoch_validation_loss_fixed_list) > 0:
-    #     epochs_loss_validation_fixed.append(np.mean(curr_epoch_validation_loss_fixed_list))
 
     return mean_epoch_loss
-
-
-def evaluate_hnet_on_single_batch(eval_images, eval_lane_points, device, hnet_model: HNet,
-                                  fixed_transformation_coefficient=None):
-    """
-    Evaluate the hnet model on the evaluation frames
-    :param eval_images: the evaluation images
-    :param eval_lane_points: the evaluation lane points
-    :param device: the device to use
-    :param hnet_model: the current hnet model
-    :param fixed_transformation_coefficient: the pre transformation coefficient
-    """
-    hnet_model.eval()
-    hnet_model.to(device)
-    train_loss = HetLoss()  # todo maybe share reference to the same loss object as train's?
-    with torch.no_grad():
-        eval_lane_points = Variable(eval_lane_points).to(device)
-        # evaluate the eval loss on the eval set with the current transformation_coefficient
-        eval_images = Variable(eval_images).to(device).type(torch.float32)
-        transformation_coefficient = hnet_model(eval_images)
-        eval_loss = train_loss(eval_lane_points, transformation_coefficient)
-
-        # evaluate the eval loss on the eval set with the known transformation_coefficient
-        eval_loss_pre_fix = None
-        if fixed_transformation_coefficient is not None:
-            # make the pre_transformation_coefficient to be same shape as transformation_coefficient
-            batched_fixed_transformation_coefficient = fixed_transformation_coefficient.repeat(
-                transformation_coefficient.shape[0], 1)
-            eval_loss_pre_fix = train_loss(eval_lane_points, batched_fixed_transformation_coefficient)
-    return eval_loss, eval_loss_pre_fix
 
 
 def pre_train_hnet(args, data_loader_train, hnet_model):
