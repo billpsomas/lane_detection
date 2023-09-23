@@ -32,10 +32,10 @@ class PreTrainHnetLoss(_Loss):
         return pre_loss
 
 
-class TrainHetLoss(_Loss):
+class HetLoss(_Loss):
 
     def __init__(self):
-        super(TrainHetLoss, self).__init__()
+        super(HetLoss, self).__init__()
 
     def forward(self, input_pts, transformation_coefficient):
         return self._hnet_loss(input_pts, transformation_coefficient)
