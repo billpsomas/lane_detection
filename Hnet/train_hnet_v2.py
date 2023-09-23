@@ -1,23 +1,25 @@
 import os
-import cv2
 import time
-import glob
 import torch
-import pickle
 import argparse
 import numpy as np
 from torch.autograd import Variable
-from matplotlib import pyplot as plt
 
 from hnet_model import HNet
-from hnet_utils import hnet_transformation_v2
 from hnet_data_processor import TusimpleForHnetDataSet
 from hnet_loss_v2 import PreTrainHnetLoss, HetLoss, PRE_H
+from hnet_utils import save_loss_to_pickle, draw_images, plot_loss
 
 PRE_TRAIN_LEARNING_RATE = 1e-4
 TRAIN_LEARNING_RATE = 1e-5
 WEIGHT_DECAY = 0.0002
 PRINT_EVERY_N_BATCHES = 10  # 100
+
+PRE_TRAIN_DIR = 'pre_train'
+TRAIN_DIR = 'train'
+IMAGES_DIR = 'images'
+PLOT_DIR = 'plots'
+WEIGHTS_DIR = 'weights'
 
 # Use GPU if available, else use CPU
 device = torch.device(
@@ -41,14 +43,14 @@ def parse_args():
     # pre train phase arguments
     parser.add_argument('--pre_train_epochs', type=int,
                         help='The pre train epochs', default=5)
-    parser.add_argument('--pre_train_save_dir', type=str, help='The pre train hnet weights save dir',
-                        default='./pre_train_hnet_weights')
+    parser.add_argument('--pre_train_save_dir', type=str, help='The pre train save dir',
+                        default=f"./{PRE_TRAIN_DIR}")
 
     # train phase arguments
     parser.add_argument('--train_epochs', type=int,
                         help='The train epochs', default=5)
-    parser.add_argument('--train_save_dir', type=str, help='The train hnet weights save dir',
-                        default='./train_hnet_weights')
+    parser.add_argument('--train_save_dir', type=str, help='The train hnet save dir',
+                        default=f"./{TRAIN_DIR}")
     return parser.parse_args()
 
 
@@ -88,7 +90,7 @@ def train(args):
     elif args.phase == 'train':
         train_hnet(args, data_loader_train, data_loader_validation, hnet_model)
     else:
-        pre_train_hnet(args, data_loader_train, device, hnet_model)
+        pre_train_hnet(args, data_loader_train, hnet_model)
         train_hnet(args, data_loader_train, data_loader_validation, hnet_model)
 
 
@@ -107,11 +109,12 @@ def train_hnet(args, data_loader_train, data_loader_validation, hnet_model):
     hnet_loss_function = HetLoss()
 
     # create weights directory
-    if args.phase == 'pretrain':
-        weights_dir_path = args.pre_train_save_dir
-    else:
-        weights_dir_path = args.train_save_dir
+    weights_dir_path = os.path.join(args.train_save_dir, WEIGHTS_DIR)
     os.makedirs(weights_dir_path, exist_ok=True)
+    images_dir_path = os.path.join(args.train_save_dir, IMAGES_DIR)
+    os.makedirs(images_dir_path, exist_ok=True)
+    plot_dir_path = os.path.join(args.train_save_dir, PLOT_DIR)
+    os.makedirs(plot_dir_path, exist_ok=True)
 
     epochs_loss = []
     epochs_loss_validation, epochs_loss_validation_fixed = [], []
@@ -120,7 +123,7 @@ def train_hnet(args, data_loader_train, data_loader_validation, hnet_model):
         mean_epoch_train_loss = train_one_epoch(data_loader_train, epoch, num_epochs,
                                                 hnet_model, optimizer, hnet_loss_function,
                                                 enable_draw_images=True,
-                                                images_output_path=weights_dir_path)
+                                                images_output_path=images_dir_path)
         epochs_loss.append(mean_epoch_train_loss)
 
         # evaluate one epoch
@@ -142,16 +145,17 @@ def train_hnet(args, data_loader_train, data_loader_validation, hnet_model):
             torch.save(hnet_model.state_dict(), file_path)
 
             # plot loss over epochs and save
-            plot_loss(epochs_loss, title='train HNet Loss', output_path=weights_dir_path)
-            plot_loss(epochs_loss_validation, title='validation HNet Loss', output_path=weights_dir_path)
+            plot_loss(epochs_loss, title='train HNet Loss', output_path=plot_dir_path)
+            plot_loss(epochs_loss_validation, title='validation HNet Loss', output_path=plot_dir_path)
             plot_loss(epochs_loss_validation_fixed, title='validation HNet Loss with fixed H',
-                      output_path=weights_dir_path)
+                      output_path=plot_dir_path)
 
     # save loss list to a pickle file
-    save_loss_to_pickle(epochs_loss, pickle_file_path='./train_hnet_loss.pkl')
-    save_loss_to_pickle(epochs_loss_validation, pickle_file_path='./train_hnet_validation_loss.pkl')
+    save_loss_to_pickle(epochs_loss, pickle_file_path=os.path.join(plot_dir_path, 'train_hnet_loss.pkl'))
+    save_loss_to_pickle(epochs_loss_validation,
+                        pickle_file_path=os.path.join(plot_dir_path, '/train_hnet_validation_loss.pkl'))
     save_loss_to_pickle(epochs_loss_validation_fixed,
-                        pickle_file_path='./train_hnet_validation_loss_fixed.pkl')
+                        pickle_file_path=os.path.join(plot_dir_path, '/train_hnet_validation_loss_fixed.pkl'))
 
 
 def train_one_epoch(data_loader_train, epoch, epochs, hnet_model, optimizer, hnet_loss_function,
@@ -272,11 +276,12 @@ def pre_train_hnet(args, data_loader_train, hnet_model):
     pre_train_loss = PreTrainHnetLoss()
 
     # create weights directory
-    if args.phase == 'pretrain':
-        weights_dir_path = args.pre_train_save_dir
-    else:
-        weights_dir_path = args.train_save_dir
+    weights_dir_path = os.path.join(args.pre_train_save_dir, WEIGHTS_DIR)
     os.makedirs(weights_dir_path, exist_ok=True)
+    images_dir_path = os.path.join(args.pre_train_save_dir, IMAGES_DIR)
+    os.makedirs(images_dir_path, exist_ok=True)
+    plot_dir_path = os.path.join(args.pre_train_save_dir, PLOT_DIR)
+    os.makedirs(plot_dir_path, exist_ok=True)
 
     epochs_loss = []
     gt_lane_points = None
@@ -312,86 +317,11 @@ def pre_train_hnet(args, data_loader_train, hnet_model):
             file_path = os.path.join(weights_dir_path, f'{args.phase}_hnet_epoch_{epoch}.pth')
             torch.save(hnet_model.state_dict(), file_path)
             draw_images(gt_lane_points[0], gt_images[0],
-                        transformation_coefficient[0], f'{args.phase}', epoch,
-                        args.pre_train_save_dir)
+                        transformation_coefficient[0], f'{args.phase}', epoch, images_dir_path)
             # plot loss over epochs and save
-            plot_loss(epochs_loss, title='Pretrain HNet Loss', output_path=args.pre_train_save_dir)
+            plot_loss(epochs_loss, title='Pretrain HNet Loss', output_path=plot_dir_path)
     # save loss list to a pickle file
-    save_loss_to_pickle(epochs_loss, pickle_file_path='./pre_train_hnet_loss.pkl')
-
-
-def save_loss_to_pickle(loss_list: list, pickle_file_path: str = './pre_train_hnet_loss.pkl'):
-    with open(pickle_file_path, 'wb') as f:
-        pickle.dump(loss_list, f)
-
-
-def plot_loss_from_pickle(pickle_file_path: str = './pre_train_hnet_loss.pkl'):
-    with open(pickle_file_path, 'rb') as f:
-        loss_list = pickle.load(f)
-    plot_loss(loss_list)
-
-
-def plot_loss(loss_list: list, title: str = 'Pretrain HNet Loss', output_path: str = None):
-    # plot so x-axis will start from 1 same as epochs
-    plt.scatter(range(1, len(loss_list) + 1), loss_list)
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.title(title)
-    plt.grid()
-    if output_path:
-        title_as_snake_case = title.lower().replace(' ', '_')
-        output_path_with_extension = os.path.join(output_path, f"{title_as_snake_case}.png")
-        plt.savefig(output_path_with_extension)
-
-
-def draw_images(lane_points: torch.tensor, image: torch.tensor, transformation_coefficient,
-                prefix_name, number, output_path):
-    """
-    Draw the lane points on the src image
-    :param lane_points: the lane points of the src image (single image) (k, 3)
-    :param image: the src image (3, H, W)
-    :param transformation_coefficient: the transformation coefficient of the src image (6)
-    :param number: the number of the src image (index)
-    :param prefix_name: prefix name for saving the images
-    :param output_path: the output path of the images
-    """
-    valid_pts_reshaped, H, preds_transformation_back, pts_projects_normalized = hnet_transformation_v2(
-        input_pts=lane_points,
-        transformation_coefficient=transformation_coefficient)
-    src_image = image.permute(1, 2, 0).cpu().numpy().astype(np.uint8).copy()
-
-    # draw the points on the src image
-    image_for_points = src_image.copy()
-    points_for_drawing = valid_pts_reshaped.transpose(0, 1)
-    for point in points_for_drawing:
-        center = (int(point[0]), int(point[1]))
-        cv2.circle(image_for_points, center, 1, (0, 0, 255), -1)
-
-    # draw the transformed back points on the src image
-    image_for_transformed_back_points = src_image.copy()
-    pred_transformation_back_for_drawing = preds_transformation_back.transpose(0, 1)
-    for point in pred_transformation_back_for_drawing:
-        center = (int(point[0]), int(point[1]))
-        cv2.circle(image_for_transformed_back_points,
-                   center, 1, (0, 0, 255), -1)
-
-    # draw the projected to bev image with lane
-    # TODO maybe mid training in produce poor results?
-    R = H.detach().cpu().numpy()
-    pts_projects_normalized_for_drawing = pts_projects_normalized.transpose(0, 1)
-    warp_image = cv2.warpPerspective(src_image, R, dsize=(
-        src_image.shape[1], src_image.shape[0]))
-    for point in pts_projects_normalized_for_drawing:
-        center = (int(point[0]), int(point[1]))
-        cv2.circle(warp_image, center, 1, (0, 0, 255), -1)
-
-    # save the images
-    os.makedirs(output_path, exist_ok=True)
-    cv2.imwrite(
-        f"{output_path}/{prefix_name}_{number}_src.png", image_for_points)
-    cv2.imwrite(
-        f"{output_path}/{prefix_name}_{number}_transformed_back.png", image_for_transformed_back_points)
-    cv2.imwrite(f"{output_path}/{prefix_name}_{number}_warp.png", warp_image)
+    save_loss_to_pickle(epochs_loss, pickle_file_path=os.path.join(plot_dir_path, '/pre_train_hnet_loss.pkl'))
 
 
 if __name__ == '__main__':

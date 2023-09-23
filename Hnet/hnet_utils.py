@@ -1,10 +1,15 @@
+import os
+import cv2
 import torch
+import pickle
+import numpy as np
+from matplotlib import pyplot as plt
 
 # Use GPU if available, else use CPU
 device = torch.device(
     "cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-def hnet_transformation_v2(input_pts, transformation_coefficient, poly_fit_order: int = 3, device: str = 'cuda'):
+def hnet_transformation(input_pts, transformation_coefficient, poly_fit_order: int = 3, device: str = 'cuda'):
     """
     :param input_pts: the points of the lane of a single image, shape: [k, 3] (k is the number of points)
     :param transformation_coefficient: the 6 params from the HNet, shape: [1, 6]
@@ -67,18 +72,79 @@ def hnet_transformation_v2(input_pts, transformation_coefficient, poly_fit_order
     return valid_pts_reshaped, H, preds_transformation_back, pts_projects_normalized
 
 
-def hnet_single_frame_loss(input_pts, transformation_coefficient, poly_fit_order: int = 3):
-    """
-    :param input_pts: the points of the lane of a single image, shape: [k, 3] (k is the number of points)
-    :param transformation_coefficient: the 6 params from the HNet, shape: [1, 6]
-    :param poly_fit_order: the order of the polynomial
-    :return single_frame_loss: the loss of the single frame
-    """
+def save_loss_to_pickle(loss_list: list, pickle_file_path: str = './pre_train_hnet_loss.pkl'):
+    with open(pickle_file_path, 'wb') as f:
+        pickle.dump(loss_list, f)
 
-    valid_pts_reshaped, _, preds_transformation_back, _ = hnet_transformation_v2(input_pts,
-                                                                                   transformation_coefficient,
-                                                                                   poly_fit_order)
-    # compute loss between back-transformed polynomial fit and gt_pts
-    single_frame_loss = torch.mean(torch.pow(valid_pts_reshaped[0, :] - preds_transformation_back[0, :], 2))
 
-    return single_frame_loss
+def plot_loss_from_pickle(pickle_file_path: str = './pre_train_hnet_loss.pkl'):
+    with open(pickle_file_path, 'rb') as f:
+        loss_list = pickle.load(f)
+    plot_loss(loss_list)
+
+
+def plot_loss(loss_list: list, title: str = 'Pretrain HNet Loss', output_path: str = None):
+    # create new figure
+    plt.figure()
+    # plot so x-axis will start from 1 same as epochs
+    plt.scatter(range(1, len(loss_list) + 1), loss_list)
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title(title)
+    plt.grid()
+    if output_path:
+        title_as_snake_case = title.lower().replace(' ', '_')
+        output_path_with_extension = os.path.join(output_path, f"{title_as_snake_case}.png")
+        plt.savefig(output_path_with_extension)
+    # close the figure
+    plt.close()
+
+
+def draw_images(lane_points: torch.tensor, image: torch.tensor, transformation_coefficient,
+                prefix_name, number, output_path):
+    """
+    Draw the lane points on the src image
+    :param lane_points: the lane points of the src image (single image) (k, 3)
+    :param image: the src image (3, H, W)
+    :param transformation_coefficient: the transformation coefficient of the src image (6)
+    :param number: the number of the src image (index)
+    :param prefix_name: prefix name for saving the images
+    :param output_path: the output path of the images
+    """
+    valid_pts_reshaped, H, preds_transformation_back, pts_projects_normalized = hnet_transformation(
+        input_pts=lane_points,
+        transformation_coefficient=transformation_coefficient)
+    src_image = image.permute(1, 2, 0).cpu().numpy().astype(np.uint8).copy()
+
+    # draw the points on the src image
+    image_for_points = src_image.copy()
+    points_for_drawing = valid_pts_reshaped.transpose(0, 1)
+    for point in points_for_drawing:
+        center = (int(point[0]), int(point[1]))
+        cv2.circle(image_for_points, center, 1, (0, 0, 255), -1)
+
+    # draw the transformed back points on the src image
+    image_for_transformed_back_points = src_image.copy()
+    pred_transformation_back_for_drawing = preds_transformation_back.transpose(0, 1)
+    for point in pred_transformation_back_for_drawing:
+        center = (int(point[0]), int(point[1]))
+        cv2.circle(image_for_transformed_back_points,
+                   center, 1, (0, 0, 255), -1)
+
+    # draw the projected to bev image with lane
+    # TODO maybe mid training in produce poor results?
+    R = H.detach().cpu().numpy()
+    pts_projects_normalized_for_drawing = pts_projects_normalized.transpose(0, 1)
+    warp_image = cv2.warpPerspective(src_image, R, dsize=(
+        src_image.shape[1], src_image.shape[0]))
+    for point in pts_projects_normalized_for_drawing:
+        center = (int(point[0]), int(point[1]))
+        cv2.circle(warp_image, center, 1, (0, 0, 255), -1)
+
+    # save the images
+    os.makedirs(output_path, exist_ok=True)
+    cv2.imwrite(
+        f"{output_path}/{prefix_name}_{number}_src.png", image_for_points)
+    cv2.imwrite(
+        f"{output_path}/{prefix_name}_{number}_transformed_back.png", image_for_transformed_back_points)
+    cv2.imwrite(f"{output_path}/{prefix_name}_{number}_warp.png", warp_image)
