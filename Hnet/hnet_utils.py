@@ -4,157 +4,18 @@ import torch
 device = torch.device(
     "cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-
-# def hnet_transformation(input_pts, transformation_coefficient, poly_fit_order: int = 3, device: str = 'cuda'):
-#     """
-#     :param input_pts: the points of the lane, shape: [N, k, 3] (k is the number of points, N is the batch size)
-#     :param transformation_coefficient: the 6 params from the HNet, shape: [N, 6]
-#     :param poly_fit_order: the order of the polynomial
-#     :param device: the device to use
-#     :return
-#     - x_pred_transformation_back: the predicted and back-projected points of the lane, shape: [N, k, 3]
-#     - the transformation matrix (H), shape: [N, 3, 3]
-#     - the projected and normalized points of the lane, shape: [N, k, 3]
-#     """
-#     # 1. create H matrix from transformation_coefficient
-#     N = transformation_coefficient.shape[0]
-#     H = torch.zeros(N, 3, 3, device=device)
-#
-#     # assign the h_prediction to the H matrix
-#     H[:, 0, 0] = transformation_coefficient[:, 0]  # a
-#     H[:, 0, 1] = transformation_coefficient[:, 1]  # b
-#     H[:, 0, 2] = transformation_coefficient[:, 2]  # c
-#     H[:, 1, 1] = transformation_coefficient[:, 3]  # d
-#     H[:, 1, 2] = transformation_coefficient[:, 4]  # e
-#     H[:, 2, 1] = transformation_coefficient[:, 5]  # f
-#     H[:, -1, -1] = 1
-#     H = H.type(torch.FloatTensor).to(device)
-#
-#     # 2. transform input_pts using H matrix
-#     # Reshape gt_pts to have shape (N, 3, k) for broadcasting
-#     pts_reshaped = input_pts.permute(0, 2, 1)
-#
-#     # todo: getting a runtime error here
-#     pts_reshaped = pts_reshaped.type(torch.FloatTensor).to(device)
-#     pts_projects = torch.matmul(H, pts_reshaped) # (N, 3, k)
-#
-#     # Initialize lists to store results
-#     all_x_preds = []
-#     all_preds = []
-#
-#     for i in range(N):
-#         X = pts_projects[i, 0, :] / pts_projects[i, 2, :]
-#         Y = pts_projects[i, 1, :] / pts_projects[i, 2, :]
-#         Y_One = torch.ones_like(Y)
-#
-#         if poly_fit_order == 2:
-#             Y_stack = torch.stack([torch.pow(Y, 2), Y, Y_One], dim=1)
-#         elif poly_fit_order == 3:
-#             Y_stack = torch.stack([torch.pow(Y, 3), torch.pow(Y, 2), Y, Y_One], dim=1)
-#         else:
-#             raise ValueError('Unknown order', poly_fit_order)
-#
-#         w = torch.matmul(torch.matmul(torch.inverse(torch.matmul(Y_stack.transpose(0, 1), Y_stack)),
-#                                       Y_stack.transpose(0, 1)), X.unsqueeze(1))
-#
-#         x_preds = torch.matmul(Y_stack, w)
-#         preds = torch.transpose(torch.stack([torch.squeeze(x_preds, -1) * pts_projects[i, 2, :],
-#                                              Y * pts_projects[i, 2, :], pts_projects[i, 2, :]], dim=1), 0, 1)
-#
-#         all_x_preds.append(x_preds)
-#         all_preds.append(preds)
-#
-#     # Stack the results from all iterations
-#     x_preds_stack = torch.stack(all_x_preds, dim=0)
-#     preds_projects_stack = torch.stack(all_preds, dim=0)
-#
-#     # Transform polynomial fit back using H matrix
-#     pred_transformation_back = torch.matmul(torch.inverse(H), preds_projects_stack)
-#
-#     # Extra returns for use
-#     pts_projects_normalized = pts_projects / pts_projects[:, 2, :].unsqueeze(1)
-#
-#     return pred_transformation_back, H, pts_projects_normalized
-
-# todo: either fix this function to supoprt batch all at once
-        # use the function above which loops over the batchs
-
-def hnet_transformation(input_pts, transformation_coefficient, poly_fit_order: int = 3, device: str = 'cuda'):
-    """
-    :param input_pts: the points of the lane, shape: [N, k, 3] (k is the number of points, N is the batch size)
-    :param transformation_coefficient: the 6 params from the HNet, shape: [N, 6]
-    :param poly_fit_order: the order of the polynomial
-    :param device: the device to use
-    :return
-    - x_pred_transformation_back: the predicted and back-projected points of the lane, shape: [N, k, 3]
-    - the transformation matrix (H), shape: [N, 3, 3]
-    - the projected and normalized points of the lane, shape: [N, k, 3]
-    """
-    # 1. create H matrix from transformation_coefficient
-    N = transformation_coefficient.shape[0]
-    H = torch.zeros(N, 3, 3, device=device)
-
-    # assign the h_prediction to the H matrix
-    H[:, 0, 0] = transformation_coefficient[:, 0]  # a
-    H[:, 0, 1] = transformation_coefficient[:, 1]  # b
-    H[:, 0, 2] = transformation_coefficient[:, 2]  # c
-    H[:, 1, 1] = transformation_coefficient[:, 3]  # d
-    H[:, 1, 2] = transformation_coefficient[:, 4]  # e
-    H[:, 2, 1] = transformation_coefficient[:, 5]  # f
-    H[:, -1, -1] = 1
-    H = H.type(torch.FloatTensor).to(device)
-
-    # 2. transform input_pts using H matrix
-    # Reshape gt_pts to have shape (N, 3, k) for broadcasting
-    pts_reshaped = input_pts.permute(0, 2, 1)
-
-    # todo: getting a runtime error here
-    pts_reshaped = pts_reshaped.type(torch.FloatTensor).to(device)
-    pts_projects = torch.matmul(H, pts_reshaped)
-
-    # 3. compute polynomial fit of transformed input_pts
-    X = torch.transpose(pts_projects[:, 0, :] / pts_projects[:, 2, :], 0, 1)
-    Y = torch.transpose(pts_projects[:, 1, :] / pts_projects[:, 2, :], 0, 1)
-    Y_One = torch.ones_like(Y)
-    if poly_fit_order == 2:
-        Y_stack = torch.stack([torch.pow(Y, 2), Y, Y_One], dim=1)
-    elif poly_fit_order == 3:
-        Y_stack = torch.stack([torch.pow(Y, 3), torch.pow(Y, 2), Y, Y_One], dim=1)
-    else:
-        raise ValueError('Unknown order', poly_fit_order)
-
-    Y_stack_t = Y_stack.transpose(0, 1).permute(2, 0, 1)
-    Y_stack = Y_stack.permute(2, 0, 1)
-    YtY = torch.matmul(Y_stack_t, Y_stack)
-    YtY_inv = torch.pinverse(YtY)
-    YtY_inv_Yt = torch.matmul(YtY_inv, Y_stack.transpose(0, 1))
-    w = torch.matmul(YtY_inv_Yt, X.unsqueeze(1))
-
-    x_preds = torch.matmul(Y_stack, w)
-    # todo: check if the de-normalization is correct
-    preds = torch.transpose(torch.stack([torch.squeeze(x_preds, -1) * pts_projects[:, 2, :],
-                                         Y * pts_projects[2, :], pts_projects[2, :]], dim=1), 0, 1)
-
-    # 4. transform polynomial fit back using H matrix
-    x_pred_transformation_back = torch.matmul(torch.matrix_inverse(H), preds)
-
-    # extra returns for use to use
-    pts_projects_normalized = pts_projects / pts_projects[2, :]
-
-    return x_pred_transformation_back, H, pts_projects_normalized
-
-
-def hnet_single_frame_loss(input_pts, transformation_coefficient, poly_fit_order: int = 3):
+def hnet_transformation_v2(input_pts, transformation_coefficient, poly_fit_order: int = 3, device: str = 'cuda'):
     """
     :param input_pts: the points of the lane of a single image, shape: [k, 3] (k is the number of points)
     :param transformation_coefficient: the 6 params from the HNet, shape: [1, 6]
     :param poly_fit_order: the order of the polynomial
+    :param device: the device to use
     :return
-    - x_pred_transformation_back: the predicted and back-projected points of the lane, shape: [k, 3]
-    - the transformation matrix (H), shape: [3, 3]
-    - the projected and normalized points of the lane, shape: [k, 3]
+    - valid_pts_reshaped (torch.Tensor): the valid points of the lane, shape: [3, k]
+    - H (torch.Tensor): the transformation matrix (H), shape: [3, 3]
+    - preds_transformation_back (torch.Tensor): the predicted and back-projected points of the lane, shape: [3, k]
+    - pts_projects_normalized: the projected and normalized points of the lane, shape: [3, k]
     """
-    # 1. create H matrix from transformation_coefficient
     H = torch.zeros(3, 3, device=device)
 
     # assign the h_prediction to the H matrix
@@ -198,12 +59,26 @@ def hnet_single_frame_loss(input_pts, transformation_coefficient, poly_fit_order
                                          Y * pts_projects[2, :], pts_projects[2, :]], dim=1), 0, 1)
 
     # 5. transform polynomial fit back using H matrix
-    x_preds_transformation_back = torch.matmul(torch.inverse(H), preds)
+    preds_transformation_back = torch.matmul(torch.inverse(H), preds)
 
+    # extra returns to use
+    pts_projects_normalized = pts_projects / pts_projects[2, :]
+
+    return valid_pts_reshaped, H, preds_transformation_back, pts_projects_normalized
+
+
+def hnet_single_frame_loss(input_pts, transformation_coefficient, poly_fit_order: int = 3):
+    """
+    :param input_pts: the points of the lane of a single image, shape: [k, 3] (k is the number of points)
+    :param transformation_coefficient: the 6 params from the HNet, shape: [1, 6]
+    :param poly_fit_order: the order of the polynomial
+    :return single_frame_loss: the loss of the single frame
+    """
+
+    valid_pts_reshaped, _, preds_transformation_back, _ = hnet_transformation_v2(input_pts,
+                                                                                   transformation_coefficient,
+                                                                                   poly_fit_order)
     # compute loss between back-transformed polynomial fit and gt_pts
-    single_frame_loss = torch.mean(torch.pow(valid_pts_reshaped[0, :] - x_preds_transformation_back[0, :], 2))
+    single_frame_loss = torch.mean(torch.pow(valid_pts_reshaped[0, :] - preds_transformation_back[0, :], 2))
 
-    # extra returns for use to use
-    # pts_projects_normalized = pts_projects / pts_projects[2, :]
-
-    return single_frame_loss  # x_preds_transformation_back, H, pts_projects_normalized
+    return single_frame_loss

@@ -10,14 +10,14 @@ from torch.autograd import Variable
 from matplotlib import pyplot as plt
 
 from hnet_model import HNet
-from hnet_utils import hnet_transformation
+from hnet_utils import hnet_transformation_v2
 from hnet_data_processor import TusimpleForHnetDataSet
 from hnet_loss_v2 import PreTrainHnetLoss, HetLoss, PRE_H
 
 PRE_TRAIN_LEARNING_RATE = 1e-4
-TRAIN_LEARNING_RATE = 5e-5
+TRAIN_LEARNING_RATE = 1e-5
 WEIGHT_DECAY = 0.0002
-PRINT_EVERY_N_BATCHES = 100
+PRINT_EVERY_N_BATCHES = 10  # 100
 
 # Use GPU if available, else use CPU
 device = torch.device(
@@ -118,7 +118,9 @@ def train_hnet(args, data_loader_train, data_loader_validation, hnet_model):
     for epoch in range(1, num_epochs + 1):
         # train one epoch
         mean_epoch_train_loss = train_one_epoch(data_loader_train, epoch, num_epochs,
-                                                hnet_model, optimizer, hnet_loss_function)
+                                                hnet_model, optimizer, hnet_loss_function,
+                                                enable_draw_images=True,
+                                                images_output_path=weights_dir_path)
         epochs_loss.append(mean_epoch_train_loss)
 
         # evaluate one epoch
@@ -139,7 +141,11 @@ def train_hnet(args, data_loader_train, data_loader_validation, hnet_model):
                 weights_dir_path, f'{args.phase}_hnet_epoch_{epoch}.pth')
             torch.save(hnet_model.state_dict(), file_path)
 
-        # todo: add eval_one_epoch
+            # plot loss over epochs and save
+            plot_loss(epochs_loss, title='train HNet Loss', output_path=weights_dir_path)
+            plot_loss(epochs_loss_validation, title='validation HNet Loss', output_path=weights_dir_path)
+            plot_loss(epochs_loss_validation_fixed, title='validation HNet Loss with fixed H',
+                      output_path=weights_dir_path)
 
     # save loss list to a pickle file
     save_loss_to_pickle(epochs_loss, pickle_file_path='./train_hnet_loss.pkl')
@@ -148,7 +154,8 @@ def train_hnet(args, data_loader_train, data_loader_validation, hnet_model):
                         pickle_file_path='./train_hnet_validation_loss_fixed.pkl')
 
 
-def train_one_epoch(data_loader_train, epoch, epochs, hnet_model, optimizer, hnet_loss_function):
+def train_one_epoch(data_loader_train, epoch, epochs, hnet_model, optimizer, hnet_loss_function,
+                    enable_draw_images=False, images_output_path=None):
     start_time = time.time()
     curr_epoch_loss_list = []
     hnet_model.train()
@@ -177,20 +184,29 @@ def train_one_epoch(data_loader_train, epoch, epochs, hnet_model, optimizer, hne
 
         curr_epoch_loss_list.append(loss.item())
 
+        # draw_images(gt_lane_points[i], gt_images[i],
+        #             transformation_coefficient[0], 'train', i,
+        #             output_path=images_output_path)
+
         if (i + 1) % PRINT_EVERY_N_BATCHES == 0:
             print('Train: Epoch [{}/{}], Step [{}/{}], loss: {:.4f}, Time: {:.4f}s'
                   .format(epoch, epochs, i + 1, len(data_loader_train), loss.item(),
                           time.time() - start_time))
             start_time = time.time()  # todo time now takes the time of the validation phase as well so it's not accurate
 
-        # draw_images(gt_lane_points[0], gt_images[0], transformation_coefficient[0], i)
     mean_epoch_loss = np.mean(curr_epoch_loss_list)
+
+    # plot loss over batches
+    if enable_draw_images:
+        draw_images(gt_lane_points[0], gt_images[0],
+                    transformation_coefficient[0], 'train', epoch,
+                    output_path=images_output_path)
 
     return mean_epoch_loss
 
 
-def eval_one_epoch(data_loader_eval, epoch, epochs, hnet_loss_function, eval_fixed_hnet_matrix = False,
-                   hnet_model = None, fixed_hnet_matrix = None):
+def eval_one_epoch(data_loader_eval, epoch, epochs, hnet_loss_function, eval_fixed_hnet_matrix=False,
+                   hnet_model=None, fixed_hnet_matrix=None):
     start_time = time.time()
     curr_epoch_loss_list = []
 
@@ -281,7 +297,7 @@ def pre_train_hnet(args, data_loader_train, hnet_model):
 
             curr_epoch_loss_list.append(loss.item())
 
-            if (i + 1) % 10 == 0:
+            if (i + 1) % PRINT_EVERY_N_BATCHES == 0:
                 print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}, Time: {:.4f}s'
                       .format(epoch, epochs, i + 1, len(data_loader_train), loss.item(),
                               time.time() - start_time))
@@ -317,8 +333,7 @@ def plot_loss_from_pickle(pickle_file_path: str = './pre_train_hnet_loss.pkl'):
 
 def plot_loss(loss_list: list, title: str = 'Pretrain HNet Loss', output_path: str = None):
     # plot so x-axis will start from 1 same as epochs
-    plt.plot(range(1, len(loss_list) + 1), loss_list)
-    plt.plot(loss_list)
+    plt.scatter(range(1, len(loss_list) + 1), loss_list)
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.title(title)
@@ -340,32 +355,36 @@ def draw_images(lane_points: torch.tensor, image: torch.tensor, transformation_c
     :param prefix_name: prefix name for saving the images
     :param output_path: the output path of the images
     """
-    points = lane_points[lane_points[:, 2] > 0]
-    pred_transformation_back, H, pts_projects_normalized = hnet_transformation(
-        input_pts=points.unsqueeze(dim=0), transformation_coefficient=transformation_coefficient.unsqueeze(dim=0))
+    valid_pts_reshaped, H, preds_transformation_back, pts_projects_normalized = hnet_transformation_v2(
+        input_pts=lane_points,
+        transformation_coefficient=transformation_coefficient)
     src_image = image.permute(1, 2, 0).cpu().numpy().astype(np.uint8).copy()
+
     # draw the points on the src image
     image_for_points = src_image.copy()
-    for point in points:
+    points_for_drawing = valid_pts_reshaped.transpose(0, 1)
+    for point in points_for_drawing:
         center = (int(point[0]), int(point[1]))
         cv2.circle(image_for_points, center, 1, (0, 0, 255), -1)
+
     # draw the transformed back points on the src image
     image_for_transformed_back_points = src_image.copy()
-    pred_transformation_back_permuted = pred_transformation_back.permute(
-        0, 2, 1)
-    for point in pred_transformation_back_permuted[0]:
+    pred_transformation_back_for_drawing = preds_transformation_back.transpose(0, 1)
+    for point in pred_transformation_back_for_drawing:
         center = (int(point[0]), int(point[1]))
         cv2.circle(image_for_transformed_back_points,
                    center, 1, (0, 0, 255), -1)
+
     # draw the projected to bev image with lane
     # TODO maybe mid training in produce poor results?
-    R = H[0].detach().cpu().numpy()
-    pts_projects_normalized_permuted = pts_projects_normalized.permute(0, 2, 1)
+    R = H.detach().cpu().numpy()
+    pts_projects_normalized_for_drawing = pts_projects_normalized.transpose(0, 1)
     warp_image = cv2.warpPerspective(src_image, R, dsize=(
         src_image.shape[1], src_image.shape[0]))
-    for point in pts_projects_normalized_permuted[0]:
+    for point in pts_projects_normalized_for_drawing:
         center = (int(point[0]), int(point[1]))
         cv2.circle(warp_image, center, 1, (0, 0, 255), -1)
+
     # save the images
     os.makedirs(output_path, exist_ok=True)
     cv2.imwrite(

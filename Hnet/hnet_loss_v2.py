@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from torch.nn.modules.loss import _Loss
 
-from hnet_utils import hnet_transformation, hnet_single_frame_loss
+from hnet_utils import hnet_single_frame_loss
 
 # Use GPU if available, else use CPU
 device = torch.device(
@@ -55,10 +55,6 @@ class HetLoss(_Loss):
             frame_transformation_coefficient = transformation_coefficient[i]
             frame_loss = hnet_single_frame_loss(frame_input_pts, frame_transformation_coefficient)
             single_frame_losses.append(frame_loss)
-
-        # x_preds_transformation_back, _, _ = hnet_transformation(input_pts, transformation_coefficient, device='cuda')
-        # compute loss between back-transformed polynomial fit and gt_pts
-        # loss = torch.mean(torch.pow(input_pts.t()[0, :] - x_preds_transformation_back[0, :], 2))
 
         loss = torch.mean(torch.stack(single_frame_losses))
 
