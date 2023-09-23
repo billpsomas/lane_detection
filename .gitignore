@@ -4,3 +4,5 @@
 *.pkl
 Hnet/pre_train_hnet_weights/
 Hnet/train_hnet_weights/
+Hnet/train/
+Hnet/pre_train/
