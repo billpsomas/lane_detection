@@ -7,13 +7,30 @@ import numpy as np
 
 
 class TusimpleForHnetDataSet(torch.utils.data.Dataset):
-    def __init__(self, set_directory, resize=(128, 64), flag='train'):
+    def __init__(self, set_directory, resize=(128, 64), flag='train', use_all_gt_for_train=False):
+        """
+        :param set_directory: the directory of the dataset
+        :param resize: the size of the image to resize to
+        :param use_all_gt_for_train: if True, use all the ground truth points for training.
+               if False, we take 2 files for training and 1 file for validation
+        :param flag: the flag of the dataset, can be 'train', 'validation' or 'val'
+        :todo currently we split the data set manually to train, val.
+              we should maybe do the same with "process_train_set.py" and split the data
+              to 80% train, 10% val, 10% test
+        :return: the dataset
+        """
 
         self.resize = resize
-
+        dataset_info_files = []
         if flag == 'train':
             # take all json files under the train directory as list
-            dataset_info_files = glob.glob('{:s}/*.json'.format(set_directory))
+            if use_all_gt_for_train:
+                dataset_info_files = glob.glob('{:s}/*.json'.format(set_directory))
+            else:
+                dataset_info_files.append(os.path.join(set_directory, 'label_data_0313.json'))
+                dataset_info_files.append(os.path.join(set_directory, 'label_data_0531.json'))
+        elif flag == 'validation' or flag == 'val':
+            dataset_info_files.append(os.path.join(set_directory, 'label_data_0601.json'))
         else:
             raise NotImplementedError('Not implemented yet')
 

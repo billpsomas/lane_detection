@@ -56,14 +56,16 @@ def train(args):
     batch_size = args.batch_size
 
     # Build train set
-    train_set = TusimpleForHnetDataSet(
-        set_directory=args.data_set_dir, flag='train'
-    )
+    train_set = TusimpleForHnetDataSet(set_directory=args.data_set_dir, flag='train')
     print("train_set length {}".format(len(train_set)))
+    validation_set = TusimpleForHnetDataSet(set_directory=args.data_set_dir, flag='validation')
+    print("validation_set length {}".format(len(validation_set)))
 
     # Define DataLoaders
     data_loader_train = torch.utils.data.DataLoader(
         train_set, batch_size=batch_size, shuffle=True, num_workers=0)
+    data_loader_validation = torch.utils.data.DataLoader(
+        validation_set, batch_size=batch_size, shuffle=True, num_workers=0)
 
     # Use GPU if available, else use CPU
     device = torch.device(
