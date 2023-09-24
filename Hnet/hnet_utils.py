@@ -5,9 +5,12 @@ import pickle
 import numpy as np
 from matplotlib import pyplot as plt
 
+from Hnet.hnet_model import HNet
+
 # Use GPU if available, else use CPU
 device = torch.device(
     "cuda") if torch.cuda.is_available() else torch.device("cpu")
+
 
 def hnet_transformation(input_pts, transformation_coefficient, poly_fit_order: int = 3, device: str = 'cuda'):
     """
@@ -72,32 +75,33 @@ def hnet_transformation(input_pts, transformation_coefficient, poly_fit_order: i
     return valid_pts_reshaped, H, preds_transformation_back, pts_projects_normalized
 
 
-def save_loss_to_pickle(loss_list: list, pickle_file_path: str = './pre_train_hnet_loss.pkl'):
-    with open(pickle_file_path, 'wb') as f:
-        pickle.dump(loss_list, f)
+def hnet_transform_back_points_after_polyfit(image, hnet_model, list_lane_pts, poly_fit_order: int = 3):
+    """
+    Transform back the lanes points after polynomial fit
+    :param image: the image to transform back the lanes points. type: tensor shape: [1, 3, H, W]
+    :param hnet_model: the hnet model, after loaded the weights
+    :param list_lane_pts: the list of the lanes points to transform back. type: list of tensors shape: [k, 3]
+    :param poly_fit_order: the order of the polynomial
+    :return: the list of the transformed back lanes points. type: list of tensors shape: [k, 3]
+    """
+    # inference
+    transformation_coefficient = hnet_model(image)
+    transformation_coefficient = transformation_coefficient[0]
 
+    # transform back all the lanes points
+    preds_transformation_back_list = []
+    # get transformed lanes points
+    for lane_pts in list_lane_pts:
+        if lane_pts.shape[1] == 2:
+            # add 1 to each point for homogeneous coordinates
+            lane_pts = torch.concatenate((lane_pts, torch.ones(lane_pts.shape[0], 1)), dim=1)
 
-def plot_loss_from_pickle(pickle_file_path: str = './pre_train_hnet_loss.pkl'):
-    with open(pickle_file_path, 'rb') as f:
-        loss_list = pickle.load(f)
-    plot_loss(loss_list)
+        _, _, preds_transformation_back, _ = hnet_transformation(lane_pts,
+                                                                 transformation_coefficient,
+                                                                 poly_fit_order)
+        preds_transformation_back_list.append(preds_transformation_back.transpose(0, 1))
 
-
-def plot_loss(loss_list: list, title: str = 'Pretrain HNet Loss', output_path: str = None):
-    # create new figure
-    plt.figure()
-    # plot so x-axis will start from 1 same as epochs
-    plt.scatter(range(1, len(loss_list) + 1), loss_list)
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.title(title)
-    plt.grid()
-    if output_path:
-        title_as_snake_case = title.lower().replace(' ', '_')
-        output_path_with_extension = os.path.join(output_path, f"{title_as_snake_case}.png")
-        plt.savefig(output_path_with_extension)
-    # close the figure
-    plt.close()
+    return preds_transformation_back_list
 
 
 def draw_images(lane_points: torch.tensor, image: torch.tensor, transformation_coefficient,
@@ -148,3 +152,31 @@ def draw_images(lane_points: torch.tensor, image: torch.tensor, transformation_c
     cv2.imwrite(
         f"{output_path}/{prefix_name}_{number}_transformed_back.png", image_for_transformed_back_points)
     cv2.imwrite(f"{output_path}/{prefix_name}_{number}_warp.png", warp_image)
+
+
+def save_loss_to_pickle(loss_list: list, pickle_file_path: str = './pre_train_hnet_loss.pkl'):
+    with open(pickle_file_path, 'wb') as f:
+        pickle.dump(loss_list, f)
+
+
+def plot_loss_from_pickle(pickle_file_path: str = './pre_train_hnet_loss.pkl'):
+    with open(pickle_file_path, 'rb') as f:
+        loss_list = pickle.load(f)
+    plot_loss(loss_list)
+
+
+def plot_loss(loss_list: list, title: str = 'Pretrain HNet Loss', output_path: str = None):
+    # create new figure
+    plt.figure()
+    # plot so x-axis will start from 1 same as epochs
+    plt.scatter(range(1, len(loss_list) + 1), loss_list)
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title(title)
+    plt.grid()
+    if output_path:
+        title_as_snake_case = title.lower().replace(' ', '_')
+        output_path_with_extension = os.path.join(output_path, f"{title_as_snake_case}.png")
+        plt.savefig(output_path_with_extension)
+    # close the figure
+    plt.close()

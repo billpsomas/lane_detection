@@ -228,14 +228,6 @@ def eval_one_epoch(data_loader_eval, epoch, epochs, hnet_loss_function, eval_fix
             gt_images = Variable(gt_images).to(device).type(torch.float32)
             gt_lane_points = Variable(gt_lane_points).to(device)
 
-            # todo: filter bad input points:
-            # something like this: points = lane_points[lane_points[:, 2] > 0]
-            # the issue is we can't do it for all the batch at once since the number of  valid filter
-            # points is different for every batch
-            # possible solutions:
-            # 1. maybe to take only lanes were we have at least 40 valid points and let that be the fix number of points for every batch
-            # 2. run loss batch by batch and not all at once, than average the loss over the batches
-
             if eval_fixed_hnet_matrix:
                 transformation_coefficient = fixed_hnet_matrix.repeat(gt_images.shape[0], 1)
             else:
