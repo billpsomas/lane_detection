@@ -104,6 +104,43 @@ def hnet_transform_back_points_after_polyfit(image, hnet_model, list_lane_pts, p
     return preds_transformation_back_list
 
 
+def get_points_after_hnet_and_fit_from_lanenet_cluster(cluster_result_from_lanenet,
+                                                       loaded_hnet_model, image,
+                                                       poly_fit_order=3,
+                                                       device_to_use='cuda'):
+    image_hnet = cv2.resize(image, (128, 64), interpolation=cv2.INTER_LINEAR)
+    cluster_result_for_hnet = np.array(cluster_result_from_lanenet, dtype=np.uint8)  # todo maybe this is not needed
+    cluster_result_for_hnet = cv2.resize(cluster_result_for_hnet, dsize=(image_hnet.shape[1], image_hnet.shape[0]),
+                                         interpolation=cv2.INTER_NEAREST)
+    elements = np.unique(cluster_result_for_hnet)
+    lanes_pts = []
+    for line_idx in elements:
+        if line_idx == 0:
+            continue
+        idx = np.where(cluster_result_for_hnet == line_idx)
+        coord = np.vstack((idx[1], idx[0])).transpose()
+        lanes_pts.append(coord)
+
+    # image_to_test_lane = image_hnet.copy()
+    #     for point in coord:
+    #         center = (int(point[0]), int(point[1]))
+    #         cv2.circle(image_to_test_lane, center, 0, (0, 0, 255), 1)
+    # cv2.imwrite(os.path.join(output_path, f"lane_for_cluster_in_hnet.png"), image_to_test_lane)
+
+    # transform list of numpy to list of torch
+    lanes_pts = [torch.tensor(lane_pts, dtype=torch.float32) for lane_pts in lanes_pts]
+    image_for_hnet_inference = torch.tensor(image_hnet, dtype=torch.float32, device=device_to_use)
+    image_for_hnet_inference = image_for_hnet_inference.permute(2, 0, 1)
+    # image_for_hnet_inference = torch.transpose(image_for_hnet_inference, (2, 0, 1))
+    image_for_hnet_inference = image_for_hnet_inference.unsqueeze(0)
+    # repeat so I have 10 batch
+    image_for_hnet_inference = image_for_hnet_inference.repeat(10, 1, 1,
+                                                               1)  # todo fix this so it doesn't have to be repeat as batch size
+    lanes_transformed_back = hnet_transform_back_points_after_polyfit(image_for_hnet_inference, loaded_hnet_model,
+                                                                      lanes_pts, poly_fit_order=poly_fit_order)
+    return image_hnet, lanes_transformed_back
+
+
 def draw_images(lane_points: torch.tensor, image: torch.tensor, transformation_coefficient,
                 prefix_name, number, output_path):
     """

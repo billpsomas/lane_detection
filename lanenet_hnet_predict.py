@@ -8,7 +8,7 @@ import numpy as np
 from Hnet.hnet_model import HNet
 from Lanenet.model import Lanenet
 from utils.evaluation import process_instance_embedding
-from Hnet.hnet_utils import hnet_transform_back_points_after_polyfit
+from Hnet.hnet_utils import get_points_after_hnet_and_fit_from_lanenet_cluster
 
 
 def init_args():
@@ -65,35 +65,9 @@ def predict(image_path, lanenet_weights, hnet_weights, output_path='./out'):
     hnet_model = HNet()
     hnet_model.load_state_dict(torch.load(hnet_weights))
     hnet_model.to(torch.device('cpu'))
-    image_hnet = cv2.resize(image, (128, 64), interpolation=cv2.INTER_LINEAR)
-    cluster_result_for_hnet = np.array(cluster_result, dtype=np.uint8)  # todo maybe this is not needed
-    cluster_result_for_hnet = cv2.resize(cluster_result_for_hnet, dsize=(image_hnet.shape[1], image_hnet.shape[0]),
-                                         interpolation=cv2.INTER_NEAREST)
-    elements = np.unique(cluster_result_for_hnet)
-    lanes_pts = []
-    image_to_test_lane = image_hnet.copy()
-    for line_idx in elements:
-        if line_idx == 0:
-            continue
-        idx = np.where(cluster_result_for_hnet == line_idx)
-        coord = np.vstack((idx[1], idx[0])).transpose()
-        lanes_pts.append(coord)
-
-        for point in coord:
-            center = (int(point[0]), int(point[1]))
-            cv2.circle(image_to_test_lane, center, 0, (0, 0, 255), 1)
-    cv2.imwrite(os.path.join(output_path, f"lane_for_cluster_in_hnet.png"), image_to_test_lane)
-
-    # transofrm list of numpy to list of torch
-    lanes_pts = [torch.tensor(lane_pts, dtype=torch.float32) for lane_pts in lanes_pts]
-
-    image_for_hnet_inference = torch.tensor(image_hnet, dtype=torch.float32)
-    image_for_hnet_inference = np.transpose(image_for_hnet_inference, (2, 0, 1))
-    image_for_hnet_inference = image_for_hnet_inference.unsqueeze(0)
-    # repeat so I have 10 batch
-    image_for_hnet_inference = image_for_hnet_inference.repeat(10, 1, 1, 1) # todo fix this so it doesn't have to be repeat as batch size
-    lanes_transformed_back = hnet_transform_back_points_after_polyfit(image_for_hnet_inference, hnet_model, lanes_pts,
-                                                                      poly_fit_order=3)
+    # transform the lanes points back from the lanenet clusters
+    image_hnet, lanes_transformed_back = get_points_after_hnet_and_fit_from_lanenet_cluster(cluster_result,
+                                                                                            hnet_model, image)
     color = [[0, 0, 0], [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 215, 0], [0, 255, 255]]
     # paint the lanes on the image
     for i, lane_pts in enumerate(lanes_transformed_back):
