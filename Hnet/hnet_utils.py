@@ -92,7 +92,7 @@ def hnet_transform_back_points_after_polyfit(image, hnet_model, list_lane_pts, p
     preds_transformation_back_list = []
     # get transformed lanes points
     for lane_pts in list_lane_pts:
-        if lane_pts.shape[1] == 2:
+        if len(lane_pts) > 0 and lane_pts.shape[1] == 2:
             # add 1 to each point for homogeneous coordinates
             lane_pts = torch.concatenate((lane_pts, torch.ones(lane_pts.shape[0], 1)), dim=1)
 
@@ -104,10 +104,10 @@ def hnet_transform_back_points_after_polyfit(image, hnet_model, list_lane_pts, p
     return preds_transformation_back_list
 
 
-def get_points_after_hnet_and_fit_from_lanenet_cluster(cluster_result_from_lanenet,
-                                                       loaded_hnet_model, image,
-                                                       poly_fit_order=3,
-                                                       device_to_use='cuda'):
+def run_hnet_and_fit_from_lanenet_cluster(cluster_result_from_lanenet,
+                                          loaded_hnet_model, image,
+                                          poly_fit_order=3,
+                                          device_to_use='cuda'):
     image_hnet = cv2.resize(image, (128, 64), interpolation=cv2.INTER_LINEAR)
     cluster_result_for_hnet = np.array(cluster_result_from_lanenet, dtype=np.uint8)  # todo maybe this is not needed
     cluster_result_for_hnet = cv2.resize(cluster_result_for_hnet, dsize=(image_hnet.shape[1], image_hnet.shape[0]),
@@ -138,7 +138,15 @@ def get_points_after_hnet_and_fit_from_lanenet_cluster(cluster_result_from_lanen
                                                                1)  # todo fix this so it doesn't have to be repeat as batch size
     lanes_transformed_back = hnet_transform_back_points_after_polyfit(image_for_hnet_inference, loaded_hnet_model,
                                                                       lanes_pts, poly_fit_order=poly_fit_order)
-    return image_hnet, lanes_transformed_back
+    # create mask in size of the image (128, 64) from the lanes
+    fit_lanes_cluster_results = np.zeros((image_hnet.shape[0], image_hnet.shape[1]), dtype=np.uint8)
+    for i, lane in enumerate(lanes_transformed_back):
+        for point in lane:
+            if point[1] < 0 or point[0] < 0 or point[1] >= image_hnet.shape[0] or point[0] >= image_hnet.shape[1]:
+                continue
+            fit_lanes_cluster_results[int(point[1]), int(point[0])] = i + 1  # +1 because the background is 0
+
+    return image_hnet, lanes_transformed_back, fit_lanes_cluster_results
 
 
 def draw_images(lane_points: torch.tensor, image: torch.tensor, transformation_coefficient,

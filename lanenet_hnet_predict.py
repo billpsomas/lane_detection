@@ -8,7 +8,7 @@ import numpy as np
 from Hnet.hnet_model import HNet
 from Lanenet.model import Lanenet
 from utils.evaluation import process_instance_embedding
-from Hnet.hnet_utils import get_points_after_hnet_and_fit_from_lanenet_cluster
+from Hnet.hnet_utils import run_hnet_and_fit_from_lanenet_cluster
 
 
 def init_args():
@@ -66,8 +66,8 @@ def predict(image_path, lanenet_weights, hnet_weights, output_path='./out'):
     hnet_model.load_state_dict(torch.load(hnet_weights))
     hnet_model.to(torch.device('cpu'))
     # transform the lanes points back from the lanenet clusters
-    image_hnet, lanes_transformed_back = get_points_after_hnet_and_fit_from_lanenet_cluster(cluster_result,
-                                                                                            hnet_model, image)
+    image_hnet, lanes_transformed_back = run_hnet_and_fit_from_lanenet_cluster(cluster_result,
+                                                                               hnet_model, image)
     color = [[0, 0, 0], [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 215, 0], [0, 255, 255]]
     # paint the lanes on the image
     for i, lane_pts in enumerate(lanes_transformed_back):
