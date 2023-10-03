@@ -200,7 +200,7 @@ def train_one_epoch(data_loader_train, epoch, epochs, hnet_model, optimizer, hne
         curr_epoch_loss_list.append(loss.item())
 
         # draw_images(gt_lane_points[i], gt_images[i],
-        #             transformation_coefficient[0], 'train', i,
+        #             transformation_coefficient[0], poly_fit_order, f"train_with_poly_{poly_fit_order}_test", i,
         #             output_path=images_output_path)
 
         if (i + 1) % PRINT_EVERY_N_BATCHES == 0:

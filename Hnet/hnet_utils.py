@@ -172,15 +172,15 @@ def draw_images(lane_points: torch.tensor, image: torch.tensor, transformation_c
     points_for_drawing = valid_pts_reshaped.transpose(0, 1)
     for point in points_for_drawing:
         center = (int(point[0]), int(point[1]))
-    cv2.circle(image_for_points, center, 1, (0, 0, 255), -1)
+        cv2.circle(image_for_points, center, 1, (0, 0, 255), -1)
 
     # draw the transformed back points on the src image
     image_for_transformed_back_points = src_image.copy()
     pred_transformation_back_for_drawing = preds_transformation_back.transpose(0, 1)
     for point in pred_transformation_back_for_drawing:
         center = (int(point[0]), int(point[1]))
-    cv2.circle(image_for_transformed_back_points,
-               center, 1, (0, 0, 255), -1)
+        cv2.circle(image_for_transformed_back_points,
+                   center, 1, (0, 0, 255), -1)
 
     # draw the projected to bev image with lane
     # TODO maybe mid training in produce poor results?
@@ -190,7 +190,7 @@ def draw_images(lane_points: torch.tensor, image: torch.tensor, transformation_c
         src_image.shape[1], src_image.shape[0]))
     for point in pts_projects_normalized_for_drawing:
         center = (int(point[0]), int(point[1]))
-    cv2.circle(warp_image, center, 1, (0, 0, 255), -1)
+        cv2.circle(warp_image, center, 1, (0, 0, 255), -1)
 
     # save the images
     os.makedirs(output_path, exist_ok=True)
