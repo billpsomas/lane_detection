@@ -115,7 +115,7 @@ def run_hnet_and_fit_from_lanenet_cluster(cluster_result_from_lanenet,
     elements = np.unique(cluster_result_for_hnet)
     lanes_pts = []
     for line_idx in elements:
-        if line_idx == 0:
+        if line_idx == 0:  # ignore background
             continue
         idx = np.where(cluster_result_for_hnet == line_idx)
         coord = np.vstack((idx[1], idx[0])).transpose()
@@ -150,19 +150,21 @@ def run_hnet_and_fit_from_lanenet_cluster(cluster_result_from_lanenet,
 
 
 def draw_images(lane_points: torch.tensor, image: torch.tensor, transformation_coefficient,
-                prefix_name, number, output_path):
+                poly_fit_order, prefix_name, number, output_path):
     """
     Draw the lane points on the src image
     :param lane_points: the lane points of the src image (single image) (k, 3)
     :param image: the src image (3, H, W)
     :param transformation_coefficient: the transformation coefficient of the src image (6)
+    :param poly_fit_order: the order of the polynomial to fit
     :param number: the number of the src image (index)
     :param prefix_name: prefix name for saving the images
     :param output_path: the output path of the images
     """
     valid_pts_reshaped, H, preds_transformation_back, pts_projects_normalized = hnet_transformation(
         input_pts=lane_points,
-        transformation_coefficient=transformation_coefficient)
+        transformation_coefficient=transformation_coefficient,
+        poly_fit_order=poly_fit_order)
     src_image = image.permute(1, 2, 0).cpu().numpy().astype(np.uint8).copy()
 
     # draw the points on the src image
@@ -170,15 +172,15 @@ def draw_images(lane_points: torch.tensor, image: torch.tensor, transformation_c
     points_for_drawing = valid_pts_reshaped.transpose(0, 1)
     for point in points_for_drawing:
         center = (int(point[0]), int(point[1]))
-        cv2.circle(image_for_points, center, 1, (0, 0, 255), -1)
+    cv2.circle(image_for_points, center, 1, (0, 0, 255), -1)
 
     # draw the transformed back points on the src image
     image_for_transformed_back_points = src_image.copy()
     pred_transformation_back_for_drawing = preds_transformation_back.transpose(0, 1)
     for point in pred_transformation_back_for_drawing:
         center = (int(point[0]), int(point[1]))
-        cv2.circle(image_for_transformed_back_points,
-                   center, 1, (0, 0, 255), -1)
+    cv2.circle(image_for_transformed_back_points,
+               center, 1, (0, 0, 255), -1)
 
     # draw the projected to bev image with lane
     # TODO maybe mid training in produce poor results?
@@ -188,7 +190,7 @@ def draw_images(lane_points: torch.tensor, image: torch.tensor, transformation_c
         src_image.shape[1], src_image.shape[0]))
     for point in pts_projects_normalized_for_drawing:
         center = (int(point[0]), int(point[1]))
-        cv2.circle(warp_image, center, 1, (0, 0, 255), -1)
+    cv2.circle(warp_image, center, 1, (0, 0, 255), -1)
 
     # save the images
     os.makedirs(output_path, exist_ok=True)

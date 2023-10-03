@@ -39,6 +39,7 @@ def parse_args():
                         help='The phase is train, pretrain or full_train', default='pretrain')
     parser.add_argument('--hnet_weights', type=str,
                         help='The hnet model weights path', required=False)
+    parser.add_argument('--poly_order', type=int, help='The polynomial order for the fit', default=3)
 
     # pre train phase arguments
     parser.add_argument('--pre_train_epochs', type=int,
@@ -100,6 +101,7 @@ def train_hnet(args, data_loader_train, data_loader_validation, hnet_model):
     optimizer = torch.optim.Adam(
         params, lr=TRAIN_LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     num_epochs = args.train_epochs
+    poly_order_to_train = args.poly_order
 
     if args.hnet_weights is not None:
         hnet_model.load_state_dict(torch.load(args.hnet_weights))
@@ -122,18 +124,21 @@ def train_hnet(args, data_loader_train, data_loader_validation, hnet_model):
         # train one epoch
         mean_epoch_train_loss = train_one_epoch(data_loader_train, epoch, num_epochs,
                                                 hnet_model, optimizer, hnet_loss_function,
+                                                poly_fit_order=poly_order_to_train,
                                                 enable_draw_images=True,
                                                 images_output_path=images_dir_path)
         epochs_loss.append(mean_epoch_train_loss)
 
         # evaluate one epoch
         mean_epoch_eval_hnet_loss = eval_one_epoch(data_loader_validation, epoch, num_epochs, hnet_loss_function,
+                                                   poly_fit_order=poly_order_to_train,
                                                    eval_fixed_hnet_matrix=False,
                                                    hnet_model=hnet_model,
                                                    fixed_hnet_matrix=None)
         epochs_loss_validation.append(mean_epoch_eval_hnet_loss)
 
         mean_epoch_eval_fixed_h_loss = eval_one_epoch(data_loader_validation, epoch, num_epochs, hnet_loss_function,
+                                                      poly_fit_order=poly_order_to_train,
                                                       eval_fixed_hnet_matrix=True,
                                                       fixed_hnet_matrix=PRE_H)
         epochs_loss_validation_fixed.append(mean_epoch_eval_fixed_h_loss)
@@ -141,13 +146,19 @@ def train_hnet(args, data_loader_train, data_loader_validation, hnet_model):
         # save weights every 1 epoch
         if epoch % 1 == 0:
             file_path = os.path.join(
-                weights_dir_path, f'{args.phase}_hnet_epoch_{epoch}.pth')
+                weights_dir_path, f'{args.phase}_hnet_poly_order_{poly_order_to_train}_epoch_{epoch}.pth')
+            # save hnet state dict as well as the poly order
             torch.save(hnet_model.state_dict(), file_path)
+            # todo save the poly order as well and parse it where ever needed
+            # torch.save({'state_dict': hnet_model.state_dict(),
+            #             'poly_order': poly_order_to_train}, file_path)
 
             # plot loss over epochs and save
-            plot_loss(epochs_loss, title='train HNet Loss', output_path=plot_dir_path)
-            plot_loss(epochs_loss_validation, title='validation HNet Loss', output_path=plot_dir_path)
-            plot_loss(epochs_loss_validation_fixed, title='validation HNet Loss with fixed H',
+            plot_loss(epochs_loss, title=f"train HNet Loss with poly {poly_order_to_train}", output_path=plot_dir_path)
+            plot_loss(epochs_loss_validation, title=f"validation HNet Loss with poly {poly_order_to_train}",
+                      output_path=plot_dir_path)
+            plot_loss(epochs_loss_validation_fixed,
+                      title=f"validation HNet Loss with poly {poly_order_to_train} with fixed H",
                       output_path=plot_dir_path)
 
     # save loss list to a pickle file
@@ -159,7 +170,7 @@ def train_hnet(args, data_loader_train, data_loader_validation, hnet_model):
 
 
 def train_one_epoch(data_loader_train, epoch, epochs, hnet_model, optimizer, hnet_loss_function,
-                    enable_draw_images=False, images_output_path=None):
+                    poly_fit_order=3, enable_draw_images=False, images_output_path=None):
     start_time = time.time()
     curr_epoch_loss_list = []
     hnet_model.train()
@@ -177,7 +188,7 @@ def train_one_epoch(data_loader_train, epoch, epochs, hnet_model, optimizer, hne
 
         optimizer.zero_grad()
         transformation_coefficient = hnet_model(gt_images)
-        loss = hnet_loss_function(gt_lane_points, transformation_coefficient)
+        loss = hnet_loss_function(gt_lane_points, transformation_coefficient, poly_fit_order)
 
         # todo: handle cases of nan Hnet output
         if loss == -1:
@@ -203,14 +214,14 @@ def train_one_epoch(data_loader_train, epoch, epochs, hnet_model, optimizer, hne
     # plot loss over batches
     if enable_draw_images:
         draw_images(gt_lane_points[0], gt_images[0],
-                    transformation_coefficient[0], 'train', epoch,
+                    transformation_coefficient[0], f"train_with_poly_{poly_fit_order}", epoch,
                     output_path=images_output_path)
 
     return mean_epoch_loss
 
 
-def eval_one_epoch(data_loader_eval, epoch, epochs, hnet_loss_function, eval_fixed_hnet_matrix=False,
-                   hnet_model=None, fixed_hnet_matrix=None):
+def eval_one_epoch(data_loader_eval, epoch, epochs, hnet_loss_function, poly_fit_order=3,
+                   eval_fixed_hnet_matrix=False, hnet_model=None, fixed_hnet_matrix=None):
     start_time = time.time()
     curr_epoch_loss_list = []
 
@@ -233,7 +244,7 @@ def eval_one_epoch(data_loader_eval, epoch, epochs, hnet_loss_function, eval_fix
             else:
                 transformation_coefficient = hnet_model(gt_images)
 
-            loss = hnet_loss_function(gt_lane_points, transformation_coefficient)
+            loss = hnet_loss_function(gt_lane_points, transformation_coefficient, poly_fit_order)
 
             # todo: handle cases of nan Hnet output
             if loss == -1:
@@ -259,6 +270,7 @@ def pre_train_hnet(args, data_loader_train, hnet_model):
     optimizer = torch.optim.Adam(
         params, lr=PRE_TRAIN_LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     epochs = args.pre_train_epochs
+    poly_order_to_draw = args.poly_order
 
     if args.hnet_weights is not None:
         hnet_model.load_state_dict(torch.load(args.hnet_weights))
@@ -309,7 +321,8 @@ def pre_train_hnet(args, data_loader_train, hnet_model):
             file_path = os.path.join(weights_dir_path, f'{args.phase}_hnet_epoch_{epoch}.pth')
             torch.save(hnet_model.state_dict(), file_path)
             draw_images(gt_lane_points[0], gt_images[0],
-                        transformation_coefficient[0], f'{args.phase}', epoch, images_dir_path)
+                        transformation_coefficient[0], poly_order_to_draw, f"pretrain_with_poly_{poly_order_to_draw}",
+                        epoch, images_dir_path)
             # plot loss over epochs and save
             plot_loss(epochs_loss, title='Pretrain HNet Loss', output_path=plot_dir_path)
     # save loss list to a pickle file

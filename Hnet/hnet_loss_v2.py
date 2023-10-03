@@ -38,10 +38,10 @@ class HetLoss(_Loss):
     def __init__(self):
         super(HetLoss, self).__init__()
 
-    def forward(self, input_pts, transformation_coefficient):
-        return self._hnet_loss(input_pts, transformation_coefficient)
+    def forward(self, input_pts, transformation_coefficient, poly_fit_order: int = 3):
+        return self._hnet_loss(input_pts, transformation_coefficient, poly_fit_order)
 
-    def _hnet_loss(self, input_pts, transformation_coefficient):
+    def _hnet_loss(self, input_pts, transformation_coefficient, poly_fit_order: int = 3):
         # assert not torch.isnan(transformation_coefficient).any(), "transformation_coefficient is nan"
         # todo: handle case where transformation_coefficient is nan
         if torch.isnan(transformation_coefficient).any():
@@ -53,7 +53,7 @@ class HetLoss(_Loss):
         for i in range(batch_size):
             frame_input_pts = input_pts[i]
             frame_transformation_coefficient = transformation_coefficient[i]
-            frame_loss = self.hnet_single_frame_loss(frame_input_pts, frame_transformation_coefficient)
+            frame_loss = self.hnet_single_frame_loss(frame_input_pts, frame_transformation_coefficient, poly_fit_order)
             single_frame_losses.append(frame_loss)
 
         loss = torch.mean(torch.stack(single_frame_losses))
