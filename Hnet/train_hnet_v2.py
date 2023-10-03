@@ -214,7 +214,7 @@ def train_one_epoch(data_loader_train, epoch, epochs, hnet_model, optimizer, hne
     # plot loss over batches
     if enable_draw_images:
         draw_images(gt_lane_points[0], gt_images[0],
-                    transformation_coefficient[0], f"train_with_poly_{poly_fit_order}", epoch,
+                    transformation_coefficient[0], poly_fit_order, f"train_with_poly_{poly_fit_order}", epoch,
                     output_path=images_output_path)
 
     return mean_epoch_loss
