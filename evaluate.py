@@ -24,7 +24,8 @@ model_path = 'TUSIMPLE/Lanenet_output/lanenet_epoch_39_batch_8.model'
 model_path = "/home/talg/git/University/Lane_Detection_PyTorch_project/TUSIMPLE/Lanenet_output/lanenet_epoch_29_batch_size_8.model"
 # model_path = 'TUSIMPLE/Lanenet_output/lanenet_epoch_39_batch_8_AUG.model'
 
-hnet_model_path = "/home/talg/git/University/Lane_Detection_PyTorch_project/Hnet/train/weights/train_hnet_epoch_2.pth"
+# hnet_model_path = "/home/talg/git/University/Lane_Detection_PyTorch_project/Hnet/train/weights/train_hnet_epoch_2.pth"
+hnet_model_path = "/home/talg/git/University/Lane_Detection_PyTorch_project/Hnet/train/weights/train_hnet_poly_order_2_epoch_5.pth"
 
 # Use GPU if available, else use CPU
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -103,9 +104,7 @@ for i, sample in enumerate(tqdm(json_pred)):
     run_hnet_fit_start = time.time()
     # transform the lanes points back from the lanenet clusters
     image_hnet, lanes_transformed_back, fit_lanes_cluster_results = run_hnet_and_fit_from_lanenet_cluster(
-        cluster_result_for_hnet,
-        hnet_model,
-        gt_img_org)
+        cluster_result_for_hnet, hnet_model, gt_img_org, poly_fit_order=2)
     run_hnet_fit_end = time.time()
     # resize lanes mask to original size
     fit_lanes_cluster_results = cv2.resize(fit_lanes_cluster_results,
@@ -115,8 +114,19 @@ for i, sample in enumerate(tqdm(json_pred)):
     number_of_different_valid_points_in_each_lane = len(
         np.unique(np.unique(fit_lanes_cluster_results, return_counts=True)[1][1:]))
     if number_of_different_valid_points_in_each_lane < 4:
-        print("wired, should be 4 but number_of_different_valid_points_in_each_lane = {}".format(
+        print("wierd, should be 4 but number_of_different_valid_points_in_each_lane = {}".format(
             number_of_different_valid_points_in_each_lane))
+
+
+    # plt.subplot(1, 2, 1)
+    # plt.imshow(gt_img_org)
+    # plt.imshow(fit_lanes_cluster_results, cmap='viridis', interpolation='nearest', alpha=0.5)
+    # # add side plot with cluster_results mask over the gt image
+    # plt.subplot(1, 2, 2)
+    # plt.imshow(gt_img_org)
+    # plt.imshow(cluster_result, cmap='viridis', interpolation='nearest', alpha=0.5)
+    # plt.title('Mask with 5 Labels')
+    # plt.show()
 
     for line_idx in elements:
         if line_idx == 0:
@@ -125,8 +135,8 @@ for i, sample in enumerate(tqdm(json_pred)):
             mask = (cluster_result == line_idx)
             fit_lanes_mask = (fit_lanes_cluster_results == line_idx)
 
-            # select_mask = mask[h_samples]
-            select_mask = fit_lanes_mask[h_samples] # todo - use this to evaluate the model after hnet poly fit
+            select_mask = mask[h_samples]
+            # select_mask = fit_lanes_mask[h_samples] # todo - use this to evaluate the model after hnet poly fit
             row_result = []
             for row in range(len(h_samples)):
                 col_indexes = np.nonzero(select_mask[row])[0]

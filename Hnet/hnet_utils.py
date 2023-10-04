@@ -142,6 +142,7 @@ def run_hnet_and_fit_from_lanenet_cluster(cluster_result_from_lanenet,
     fit_lanes_cluster_results = np.zeros((image_hnet.shape[0], image_hnet.shape[1]), dtype=np.uint8)
     for i, lane in enumerate(lanes_transformed_back):
         for point in lane:
+            # check point validity (inside the image)
             if point[1] < 0 or point[0] < 0 or point[1] >= image_hnet.shape[0] or point[0] >= image_hnet.shape[1]:
                 continue
             fit_lanes_cluster_results[int(point[1]), int(point[0])] = i + 1  # +1 because the background is 0
