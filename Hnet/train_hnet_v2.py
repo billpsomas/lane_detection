@@ -326,7 +326,7 @@ def pre_train_hnet(args, data_loader_train, hnet_model):
             # plot loss over epochs and save
             plot_loss(epochs_loss, title='Pretrain HNet Loss', output_path=plot_dir_path)
     # save loss list to a pickle file
-    save_loss_to_pickle(epochs_loss, pickle_file_path=os.path.join(plot_dir_path, '/pre_train_hnet_loss.pkl'))
+    save_loss_to_pickle(epochs_loss, pickle_file_path=os.path.join(plot_dir_path, 'pre_train_hnet_loss.pkl'))
 
 
 if __name__ == '__main__':
