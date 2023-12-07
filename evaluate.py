@@ -72,6 +72,9 @@ def evaluate(args):
     pred_json_path = 'TUSIMPLE/test_set/test_tasks_0627.json'
     json_pred = [json.loads(line) for line in open(pred_json_path).readlines()]
 
+    test_json_path = 'TUSIMPLE/test_set/test_label.json'
+    json_test = [json.loads(line) for line in open(test_json_path).readlines()]
+
     all_time_forward = []
     all_time_clustering = []
     all_time_hnet_and_fit = []
@@ -83,6 +86,7 @@ def evaluate(args):
         run_time = sample['run_time']
         raw_file = sample['raw_file']
         img_path = ops.join('TUSIMPLE/test_set', raw_file)
+        gt_lanes = json_test[i].get('lanes', [])
 
         # Read image and preprocess it in order to be ready 
         # to go through the network 
@@ -146,10 +150,24 @@ def evaluate(args):
         plt.subplot(1, 2, 1)
         plt.imshow(cv2.cvtColor(gt_img_org, cv2.COLOR_BGR2RGB))
         plt.imshow(fit_lanes_cluster_results, interpolation='nearest', alpha=0.3, cmap='inferno')
+        for gt_lane in gt_lanes:
+            # plot gt_lane and h_samples only where gt_lane > 0
+            gt_lane = np.array(gt_lane).astype(np.int32)
+            h_samples = np.array(h_samples).astype(np.int32)
+            relevant_gt_lane_indices = np.where(gt_lane > 0)[0]
+            plt.scatter(gt_lane[relevant_gt_lane_indices], h_samples[relevant_gt_lane_indices] ,color='red', marker='s', alpha=0.1)
         # add side plot with cluster_results mask over the gt image
         plt.subplot(1, 2, 2)
+        for gt_lane in gt_lanes:
+            # plot gt_lane and h_samples only where gt_lane > 0
+            gt_lane = np.array(gt_lane).astype(np.int32)
+            h_samples = np.array(h_samples).astype(np.int32)
+            relevant_gt_lane_indices = np.where(gt_lane > 0)[0]
+            plt.scatter(gt_lane[relevant_gt_lane_indices], h_samples[relevant_gt_lane_indices] ,color='red', marker='s', alpha=0.1)
+
         plt.imshow(cv2.cvtColor(gt_img_org, cv2.COLOR_BGR2RGB), cmap='inferno')
         plt.imshow(cluster_result, interpolation='nearest', alpha=0.3, cmap='inferno')
+            
 
         plt.title('Mask with 5 Labels')
         plt.show()
