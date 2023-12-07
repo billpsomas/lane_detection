@@ -9,6 +9,7 @@ from hnet_model import HNet
 from hnet_data_processor import TusimpleForHnetDataSet
 from hnet_loss_v2 import PreTrainHnetLoss, HetLoss, PRE_H
 from hnet_utils import save_loss_to_pickle, draw_images, plot_loss
+from hnet_utils import save_hnet_model_with_info, load_hnet_model_with_info
 
 PRE_TRAIN_LEARNING_RATE = 1e-4
 TRAIN_LEARNING_RATE = 1e-5
@@ -39,7 +40,8 @@ def parse_args():
                         help='The phase is train, pretrain or full_train', default='pretrain')
     parser.add_argument('--hnet_weights', type=str,
                         help='The hnet model weights path', required=False)
-    parser.add_argument('--poly_order', type=int, help='The polynomial order for the fit', default=3)
+    parser.add_argument('--poly_order', type=int,
+                        help='The polynomial order for the fit', default=3)
 
     # pre train phase arguments
     parser.add_argument('--pre_train_epochs', type=int,
@@ -60,9 +62,11 @@ def train(args):
     batch_size = args.batch_size
 
     # Build train set
-    train_set = TusimpleForHnetDataSet(set_directory=args.data_set_dir, flag='train')
+    train_set = TusimpleForHnetDataSet(
+        set_directory=args.data_set_dir, flag='train')
     print("train_set length {}".format(len(train_set)))
-    validation_set = TusimpleForHnetDataSet(set_directory=args.data_set_dir, flag='validation')
+    validation_set = TusimpleForHnetDataSet(
+        set_directory=args.data_set_dir, flag='validation')
     print("validation_set length {}".format(len(validation_set)))
 
     # Define DataLoaders
@@ -79,6 +83,21 @@ def train(args):
     hnet_model = HNet()
     hnet_model.to(device)
 
+    desired_poly_order = args.poly_order
+    if args.hnet_weights is not None:
+        model_info_dict = load_hnet_model_with_info(
+            hnet_model, args.hnet_weights)
+        print("Load hnet weights success")
+        trained_with_poly_different_from_desired = "poly_order" in model_info_dict and \
+            model_info_dict["poly_order"] != args.poly_order and \
+            model_info_dict["phase"] == "train"
+        if trained_with_poly_different_from_desired:
+            print("Warning: poly order in the weights file is different from the poly order in the arguments")
+            desired_poly_order = model_info_dict["poly_order"]
+            print(f"Will {args.phase} with poly order {desired_poly_order} from the weights file")
+    else:
+        print("No hnet weights file was given, train from scratch")
+
     # # Define scheduler
     # lr_scheduler = torch.optim.lr_scheduler.StepLR(
     #     optimizer, step_size=10, gamma=0.1)
@@ -87,27 +106,22 @@ def train(args):
                           'full_train'], "phase must be pretrain, train or full_train"
 
     if args.phase == 'pretrain':
-        pre_train_hnet(args, data_loader_train, hnet_model)
+        pre_train_hnet(args, data_loader_train, hnet_model, desired_poly_order)
     elif args.phase == 'train':
-        train_hnet(args, data_loader_train, data_loader_validation, hnet_model)
+        train_hnet(args, data_loader_train, data_loader_validation, hnet_model, desired_poly_order)
     else:
         pre_train_hnet(args, data_loader_train, hnet_model)
         train_hnet(args, data_loader_train, data_loader_validation, hnet_model)
 
 
-def train_hnet(args, data_loader_train, data_loader_validation, hnet_model):
+def train_hnet(args, data_loader_train, data_loader_validation, hnet_model, poly_order=3):
     # Define the optimizer
     params = [p for p in hnet_model.parameters() if p.requires_grad]
     optimizer = torch.optim.Adam(
         params, lr=TRAIN_LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     num_epochs = args.train_epochs
-    poly_order_to_train = args.poly_order
+    poly_order_to_train = poly_order
 
-    if args.hnet_weights is not None:
-        hnet_model.load_state_dict(torch.load(args.hnet_weights))
-        print("Load train hnet weights success")
-    else:
-        print("No train hnet weights")
     hnet_loss_function = HetLoss()
 
     # create weights directory
@@ -147,14 +161,14 @@ def train_hnet(args, data_loader_train, data_loader_validation, hnet_model):
         if epoch % 1 == 0:
             file_path = os.path.join(
                 weights_dir_path, f'{args.phase}_hnet_poly_order_{poly_order_to_train}_epoch_{epoch}.pth')
-            # save hnet state dict as well as the poly order
-            torch.save(hnet_model.state_dict(), file_path)
-            # todo save the poly order as well and parse it where ever needed
-            # torch.save({'state_dict': hnet_model.state_dict(),
-            #             'poly_order': poly_order_to_train}, file_path)
+            # save model state along with other parameters
+            save_hnet_model_with_info(hnet_model=hnet_model, epoch=epoch, phase=args.phase,
+                                      batch_size=args.batch_size, poly_order=poly_order_to_train,
+                                      output_path=file_path)
 
             # plot loss over epochs and save
-            plot_loss(epochs_loss, title=f"train HNet Loss with poly {poly_order_to_train}", output_path=plot_dir_path)
+            plot_loss(
+                epochs_loss, title=f"train HNet Loss with poly {poly_order_to_train}", output_path=plot_dir_path)
             plot_loss(epochs_loss_validation, title=f"validation HNet Loss with poly {poly_order_to_train}",
                       output_path=plot_dir_path)
             plot_loss(epochs_loss_validation_fixed,
@@ -162,11 +176,12 @@ def train_hnet(args, data_loader_train, data_loader_validation, hnet_model):
                       output_path=plot_dir_path)
 
     # save loss list to a pickle file
-    save_loss_to_pickle(epochs_loss, pickle_file_path=os.path.join(plot_dir_path, 'train_hnet_loss.pkl'))
+    save_loss_to_pickle(epochs_loss, pickle_file_path=os.path.join(
+        plot_dir_path, 'train_hnet_loss.pkl'))
     save_loss_to_pickle(epochs_loss_validation,
-                        pickle_file_path=os.path.join(plot_dir_path, '/train_hnet_validation_loss.pkl'))
+                        pickle_file_path=os.path.join(plot_dir_path, 'train_hnet_validation_loss.pkl'))
     save_loss_to_pickle(epochs_loss_validation_fixed,
-                        pickle_file_path=os.path.join(plot_dir_path, '/train_hnet_validation_loss_fixed.pkl'))
+                        pickle_file_path=os.path.join(plot_dir_path, 'train_hnet_validation_loss_fixed.pkl'))
 
 
 def train_one_epoch(data_loader_train, epoch, epochs, hnet_model, optimizer, hnet_loss_function,
@@ -188,7 +203,8 @@ def train_one_epoch(data_loader_train, epoch, epochs, hnet_model, optimizer, hne
 
         optimizer.zero_grad()
         transformation_coefficient = hnet_model(gt_images)
-        loss = hnet_loss_function(gt_lane_points, transformation_coefficient, poly_fit_order)
+        loss = hnet_loss_function(
+            gt_lane_points, transformation_coefficient, poly_fit_order)
 
         # todo: handle cases of nan Hnet output
         if loss == -1:
@@ -207,14 +223,16 @@ def train_one_epoch(data_loader_train, epoch, epochs, hnet_model, optimizer, hne
             print('Train: Epoch [{}/{}], Step [{}/{}], loss: {:.4f}, Time: {:.4f}s'
                   .format(epoch, epochs, i + 1, len(data_loader_train), loss.item(),
                           time.time() - start_time))
-            start_time = time.time()  # todo time now takes the time of the validation phase as well so it's not accurate
+            # todo time now takes the time of the validation phase as well so it's not accurate
+            start_time = time.time()
 
     mean_epoch_loss = np.mean(curr_epoch_loss_list)
 
     # plot loss over batches
     if enable_draw_images:
         draw_images(gt_lane_points[0], gt_images[0],
-                    transformation_coefficient[0], poly_fit_order, f"train_with_poly_{poly_fit_order}", epoch,
+                    transformation_coefficient[
+                        0], poly_fit_order, f"train_with_poly_{poly_fit_order}", epoch,
                     output_path=images_output_path)
 
     return mean_epoch_loss
@@ -240,11 +258,13 @@ def eval_one_epoch(data_loader_eval, epoch, epochs, hnet_loss_function, poly_fit
             gt_lane_points = Variable(gt_lane_points).to(device)
 
             if eval_fixed_hnet_matrix:
-                transformation_coefficient = fixed_hnet_matrix.repeat(gt_images.shape[0], 1)
+                transformation_coefficient = fixed_hnet_matrix.repeat(
+                    gt_images.shape[0], 1)
             else:
                 transformation_coefficient = hnet_model(gt_images)
 
-            loss = hnet_loss_function(gt_lane_points, transformation_coefficient, poly_fit_order)
+            loss = hnet_loss_function(
+                gt_lane_points, transformation_coefficient, poly_fit_order)
 
             # todo: handle cases of nan Hnet output
             if loss == -1:
@@ -256,7 +276,8 @@ def eval_one_epoch(data_loader_eval, epoch, epochs, hnet_loss_function, poly_fit
                 print('Eval {}: Epoch [{}/{}], Step [{}/{}], loss: {:.4f}, Time: {:.4f}s'
                       .format(mode_str, epoch, epochs, i + 1, len(data_loader_eval), loss.item(),
                               time.time() - start_time))
-                start_time = time.time()  # todo time now takes the time of the validation phase as well so it's not accurate
+                # todo time now takes the time of the validation phase as well so it's not accurate
+                start_time = time.time()
 
         # draw_images(gt_lane_points[0], gt_images[0], transformation_coefficient[0], i)
     mean_epoch_loss = np.mean(curr_epoch_loss_list)
@@ -264,20 +285,13 @@ def eval_one_epoch(data_loader_eval, epoch, epochs, hnet_loss_function, poly_fit
     return mean_epoch_loss
 
 
-def pre_train_hnet(args, data_loader_train, hnet_model):
+def pre_train_hnet(args, data_loader_train, hnet_model, poly_order=3):
     # Define the optimizer
     params = [p for p in hnet_model.parameters() if p.requires_grad]
     optimizer = torch.optim.Adam(
         params, lr=PRE_TRAIN_LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     epochs = args.pre_train_epochs
-    poly_order_to_draw = args.poly_order
-
-    if args.hnet_weights is not None:
-        hnet_model.load_state_dict(torch.load(args.hnet_weights))
-        print("Load pretrain hnet weights success")
-    else:
-        print("No pretrain hnet weights")
-    pre_train_loss = PreTrainHnetLoss()
+    poly_order_to_draw = poly_order
 
     # create weights directory
     weights_dir_path = os.path.join(args.pre_train_save_dir, WEIGHTS_DIR)
@@ -318,15 +332,23 @@ def pre_train_hnet(args, data_loader_train, hnet_model):
             # 1. save the model
             # 2. draw the images
             # 3. plot the loss
-            file_path = os.path.join(weights_dir_path, f'{args.phase}_hnet_epoch_{epoch}.pth')
-            torch.save(hnet_model.state_dict(), file_path)
+            file_path = os.path.join(
+                weights_dir_path, f'{args.phase}_hnet_epoch_{epoch}.pth')
+            # save model state along with other parameters
+            save_hnet_model_with_info(hnet_model=hnet_model, epoch=epoch,
+                                      phase=args.phase, batch_size=args.batch_size,
+                                      poly_order=poly_order_to_draw, output_path=file_path)
+
             draw_images(gt_lane_points[0], gt_images[0],
-                        transformation_coefficient[0], poly_order_to_draw, f"pretrain_with_poly_{poly_order_to_draw}",
+                        transformation_coefficient[
+                            0], poly_order_to_draw, f"pretrain_with_poly_{poly_order_to_draw}",
                         epoch, images_dir_path)
             # plot loss over epochs and save
-            plot_loss(epochs_loss, title='Pretrain HNet Loss', output_path=plot_dir_path)
+            plot_loss(epochs_loss, title='Pretrain HNet Loss',
+                      output_path=plot_dir_path)
     # save loss list to a pickle file
-    save_loss_to_pickle(epochs_loss, pickle_file_path=os.path.join(plot_dir_path, 'pre_train_hnet_loss.pkl'))
+    save_loss_to_pickle(epochs_loss, pickle_file_path=os.path.join(
+        plot_dir_path, 'pre_train_hnet_loss.pkl'))
 
 
 if __name__ == '__main__':

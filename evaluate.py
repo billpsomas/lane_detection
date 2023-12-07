@@ -16,6 +16,7 @@ from utils.evaluation import process_instance_embedding, video_to_clips
 
 import argparse
 from Hnet.hnet_model import HNet
+from Hnet.hnet_utils import load_hnet_model_with_info
 from Hnet.hnet_utils import run_hnet_and_fit_from_lanenet_cluster
 
 # Use GPU if available, else use CPU
@@ -28,6 +29,9 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--lanenet_model_path', type=str, help='lanenet model path', required=True)
     parser.add_argument('--hnet_model_path', type=str, help='hnet model path', required=True)
+    parser.add_argument('--poly_order', type=int, 
+                        help='poly order to fit when evaultating. if info exist in loaded hnet model, use loaded value', 
+                        required=False, default=2)
 
     return parser.parse_args()
 
@@ -57,8 +61,10 @@ def evaluate(args):
 
     # Initialize the Hnet model and load its parameters
     hnet_model = HNet()
-    hnet_model.load_state_dict(torch.load(hnet_model_path))
-    hnet_model.to(device)  # todo do we need CPU?
+    # hnet_model.load_state_dict(torch.load(hnet_model_path))
+    loaded_hnet_info_dict = load_hnet_model_with_info(hnet_model, hnet_model_path)
+    hnet_model.to(device)
+    poly_order = loaded_hnet_info_dict.get('poly_order', args.poly_order)
     print('Hnet Model successfully loaded!')
 
     # Read the test_tasks_0627.json file
@@ -123,7 +129,7 @@ def evaluate(args):
         run_hnet_fit_start = time.time()
         # transform the lanes points back from the lanenet clusters
         image_hnet, lanes_transformed_back, fit_lanes_cluster_results = run_hnet_and_fit_from_lanenet_cluster(
-            cluster_result_for_hnet, hnet_model, gt_img_org, poly_fit_order=2)
+            cluster_result_for_hnet, hnet_model, gt_img_org, poly_fit_order=poly_order)
         
         run_hnet_fit_end = time.time()
         # resize lanes mask to original size
@@ -137,16 +143,16 @@ def evaluate(args):
             print("wierd, should be 4 but number_of_different_valid_points_in_each_lane = {}".format(
                 number_of_different_valid_points_in_each_lane))
 
-        # plt.subplot(1, 2, 1)
-        # plt.imshow(cv2.cvtColor(gt_img_org, cv2.COLOR_BGR2RGB))
-        # plt.imshow(fit_lanes_cluster_results, interpolation='nearest', alpha=0.3, cmap='inferno')
-        # # add side plot with cluster_results mask over the gt image
-        # plt.subplot(1, 2, 2)
-        # plt.imshow(cv2.cvtColor(gt_img_org, cv2.COLOR_BGR2RGB), cmap='inferno')
-        # plt.imshow(cluster_result, interpolation='nearest', alpha=0.3, cmap='inferno')
+        plt.subplot(1, 2, 1)
+        plt.imshow(cv2.cvtColor(gt_img_org, cv2.COLOR_BGR2RGB))
+        plt.imshow(fit_lanes_cluster_results, interpolation='nearest', alpha=0.3, cmap='inferno')
+        # add side plot with cluster_results mask over the gt image
+        plt.subplot(1, 2, 2)
+        plt.imshow(cv2.cvtColor(gt_img_org, cv2.COLOR_BGR2RGB), cmap='inferno')
+        plt.imshow(cluster_result, interpolation='nearest', alpha=0.3, cmap='inferno')
 
-        # plt.title('Mask with 5 Labels')
-        # plt.show()
+        plt.title('Mask with 5 Labels')
+        plt.show()
 
         for line_idx in elements:
             if line_idx == 0:
