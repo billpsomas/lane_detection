@@ -135,7 +135,18 @@ def hnet_transform_back_points_after_polyfit(image, hnet_model, list_lane_pts, p
 def run_hnet_and_fit_from_lanenet_cluster(cluster_result_from_lanenet,
                                           loaded_hnet_model, image,
                                           poly_fit_order=3,
+                                          take_average_lane_cluster_pts=False,
                                           device_to_use='cuda'):
+    """
+    Run the hnet model and fit the lanes points from the lanenet cluster
+    :param cluster_result_from_lanenet: the cluster result from the lanenet model
+    :param loaded_hnet_model: the loaded hnet model
+    :param image: the image to run the hnet model on
+    :param poly_fit_order: the order of the polynomial to fit
+    :param take_average_lane_cluster_pts: if to take the average of the lane cluster points
+    (same as in evaluation (see evaluate.py: "row_result")
+    :param device_to_use: the device to use
+    """
     image_hnet = cv2.resize(image, (128, 64), interpolation=cv2.INTER_LINEAR)
     cluster_result_for_hnet = np.array(
         cluster_result_from_lanenet, dtype=np.uint8)  # todo maybe this is not needed
@@ -145,7 +156,13 @@ def run_hnet_and_fit_from_lanenet_cluster(cluster_result_from_lanenet,
         if line_idx == 0:  # ignore background
             continue
         idx = np.where(cluster_result_for_hnet == line_idx)
-        coord = np.vstack((idx[1], idx[0])).transpose()
+        x, y = idx[1], idx[0]
+        if take_average_lane_cluster_pts:
+            # for every row (y) take the average of the cols (x) values, 
+            # same as in evaluation (see evaluate.py: "row_result")
+            x = np.array([np.mean(x[np.where(y == i)]) for i in np.unique(y)])
+            y = np.unique(y)
+        coord = np.vstack((x, y)).transpose()
         lanes_pts.append(coord)
 
     # transform list of numpy to list of torch
