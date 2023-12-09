@@ -23,6 +23,8 @@
   - [X] it means we need to change the dict that is saved (no longer just the weights)
 - [X] when fitting from lane clustering (in evaulutaion and predict) (Hnet/hnet_utils.py: 149) consider using everage of the lanenetcluster pixel  in each height (instead using them all)
 - [ ] consider connect through line all the points from poly in image plan after fit
+- [ ] consider add RANSAC to points in fit during inference and also maybe in training. (in hnet_transformation?)
+- [ ] evaluate lanenet cluster and hnet at the same time with different preds fiels - to compare
 
 # TODO if we have time
 - [ ] train with all lanes in the same image at one 

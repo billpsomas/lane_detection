@@ -17,7 +17,9 @@ from utils.evaluation import process_instance_embedding, video_to_clips
 import argparse
 from Hnet.hnet_model import HNet
 from Hnet.hnet_utils import load_hnet_model_with_info
+from Hnet.hnet_utils import get_x_threshes_of_gt_evaluation
 from Hnet.hnet_utils import run_hnet_and_fit_from_lanenet_cluster
+
 
 # Use GPU if available, else use CPU
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -138,8 +140,8 @@ def evaluate(args):
         run_hnet_fit_end = time.time()
         # resize lanes mask to original size
         fit_lanes_cluster_results = cv2.resize(fit_lanes_cluster_results,
-                                            dsize=(org_shape[1], org_shape[0]),
-                                            interpolation=cv2.INTER_NEAREST)
+                                               dsize=(org_shape[1], org_shape[0]),
+                                               interpolation=cv2.INTER_NEAREST)
         # sanity check - if there are the same amount of valid lane points in each lane cluster its wierd
         number_of_different_valid_points_in_each_lane = len(
             np.unique(np.unique(fit_lanes_cluster_results, return_counts=True)[1][1:]))
@@ -147,29 +149,34 @@ def evaluate(args):
             print("wierd, should be 4 but number_of_different_valid_points_in_each_lane = {}".format(
                 number_of_different_valid_points_in_each_lane))
 
-        plt.subplot(1, 2, 1)
-        plt.imshow(cv2.cvtColor(gt_img_org, cv2.COLOR_BGR2RGB))
-        plt.imshow(fit_lanes_cluster_results, interpolation='nearest', alpha=0.3, cmap='inferno')
-        for gt_lane in gt_lanes:
-            # plot gt_lane and h_samples only where gt_lane > 0
-            gt_lane = np.array(gt_lane).astype(np.int32)
-            h_samples = np.array(h_samples).astype(np.int32)
-            relevant_gt_lane_indices = np.where(gt_lane > 0)[0]
-            plt.scatter(gt_lane[relevant_gt_lane_indices], h_samples[relevant_gt_lane_indices] ,color='red', marker='s', alpha=0.1)
-        # add side plot with cluster_results mask over the gt image
-        plt.subplot(1, 2, 2)
-        for gt_lane in gt_lanes:
-            # plot gt_lane and h_samples only where gt_lane > 0
-            gt_lane = np.array(gt_lane).astype(np.int32)
-            h_samples = np.array(h_samples).astype(np.int32)
-            relevant_gt_lane_indices = np.where(gt_lane > 0)[0]
-            plt.scatter(gt_lane[relevant_gt_lane_indices], h_samples[relevant_gt_lane_indices] ,color='red', marker='s', alpha=0.1)
-
-        plt.imshow(cv2.cvtColor(gt_img_org, cv2.COLOR_BGR2RGB), cmap='inferno')
-        plt.imshow(cluster_result, interpolation='nearest', alpha=0.3, cmap='inferno')
-            
-
-        plt.title('Mask with 5 Labels')
+        # Plot the results
+        x_gt_trehshes = get_x_threshes_of_gt_evaluation(gt_lanes, h_samples)
+        # Create a figure with 1 row and 2 columns
+        fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+        # Plot the first subplot
+        axs[0].imshow(cv2.cvtColor(gt_img_org, cv2.COLOR_BGR2RGB))
+        axs[0].imshow(fit_lanes_cluster_results, interpolation='nearest', alpha=0.3, cmap='inferno')
+        axs[0].set_title('fit_lanes_cluster_results')
+        # Plot the second subplot
+        axs[1].imshow(cv2.cvtColor(gt_img_org, cv2.COLOR_BGR2RGB), cmap='inferno')
+        axs[1].imshow(cluster_result, interpolation='nearest', alpha=0.3, cmap='inferno')
+        axs[1].set_title('cluster_result')
+        for ax in axs:
+            # draw GT with trehsolds for each gt pixel
+            for lane_idx, gt_lane in enumerate(gt_lanes):
+                # Plot gt_lane and h_samples only where gt_lane > 0
+                gt_lane = np.array(gt_lane).astype(np.int32)
+                h_samples = np.array(h_samples).astype(np.int32)
+                relevant_gt_lane_indices = np.where(gt_lane > 0)[0]
+                x_thresh = x_gt_trehshes[lane_idx]
+                xs_gt_lane = [np.clip(gt_lane[relevant_gt_lane_indices] - x_thresh, 0, gt_img_org.shape[1]),
+                            np.clip(gt_lane[relevant_gt_lane_indices] + x_thresh, 0, gt_img_org.shape[1])]
+                ys_gt_lanes = [h_samples[relevant_gt_lane_indices], h_samples[relevant_gt_lane_indices]]
+                ax.scatter(gt_lane[relevant_gt_lane_indices], h_samples[relevant_gt_lane_indices], color='green', s=3)
+                ax.plot(xs_gt_lane, ys_gt_lanes, '-', color='red')
+        # Adjust layout to prevent clipping of titles
+        plt.tight_layout()
+        # Show the figure
         plt.show()
 
         for line_idx in elements:

@@ -165,6 +165,14 @@ def run_hnet_and_fit_from_lanenet_cluster(cluster_result_from_lanenet,
         coord = np.vstack((x, y)).transpose()
         lanes_pts.append(coord)
 
+        # draw the points on the src image
+        # plt.figure()
+        # plt.title(f"cluster {line_idx}")
+        # plt.imshow(cv2.resize(image, (cluster_result_from_lanenet.shape[1], cluster_result_from_lanenet.shape[0]), interpolation=cv2.INTER_LINEAR))
+        # plt.scatter(x, y, s=1, color='red')
+        # plt.show()
+
+
     # transform list of numpy to list of torch
     lanes_pts = [torch.tensor(lane_pts, dtype=torch.float32)
                  for lane_pts in lanes_pts]
@@ -328,3 +336,13 @@ def load_hnet_model_with_info(hnet_model: HNet, model_path: str, device: str = '
     if 'regularization' in checkpoint.keys():
         info_dict_to_return['regularization'] = checkpoint['regularization']
     return info_dict_to_return
+
+def get_x_threshes_of_gt_evaluation(gt, y_samples):
+    """
+    copy of the evalutation part to use in drawings
+    """
+    from utils.lane import LaneEval
+    angles = [LaneEval.get_angle(np.array(x_gts), np.array(y_samples)) for x_gts in gt]
+    threshs = [LaneEval.pixel_thresh / np.cos(angle) for angle in angles]
+    return threshs
+            
