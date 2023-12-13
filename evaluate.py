@@ -149,6 +149,46 @@ def evaluate(args):
             print("wierd, should be 4 but number_of_different_valid_points_in_each_lane = {}".format(
                 number_of_different_valid_points_in_each_lane))
 
+        pred_lanes_lanenet = []
+        pred_lanes_hnet = []
+
+        for line_idx in elements:
+            if line_idx == 0:
+                continue
+            else:
+                mask = (cluster_result == line_idx)
+                fit_lanes_mask = (fit_lanes_cluster_results == line_idx)
+
+                select_mask = mask[h_samples]
+                select_mask_hnet = fit_lanes_mask[h_samples] # todo - use this to evaluate the model after hnet poly fit
+                row_result = []
+                row_result_hnet = []
+                for row in range(len(h_samples)):
+                    col_indexes = np.nonzero(select_mask[row])[0]
+                    col_indexes_hnet = np.nonzero(select_mask_hnet[row])[0]
+                    if len(col_indexes) == 0:
+                        row_result.append(-2)
+                    else:
+                        row_result.append(int(col_indexes.min() + (col_indexes.max() - col_indexes.min()) / 2))
+                    if len(col_indexes_hnet) == 0:
+                        row_result_hnet.append(-2)
+                    else:
+                        row_result_hnet.append(int(col_indexes_hnet.min() + (col_indexes_hnet.max() - col_indexes_hnet.min()) / 2))
+                pred_lanes_lanenet.append(row_result)
+                pred_lanes_hnet.append(row_result_hnet)
+
+                # Append results to .json file
+                json_pred[i]['lanes'].append(row_result)
+                json_pred[i]['run_time'] = time_end - time_start
+                all_time_forward.append(time_end - time_start)
+                all_time_clustering.append(clu_end - clu_start)
+                all_time_hnet_and_fit.append(run_hnet_fit_end - run_hnet_fit_start)
+
+        from utils.lane import LaneEval
+        a_lanenet, p_lanenet, n_lanenet = LaneEval.bench(pred_lanes_lanenet, gt_lanes, h_samples, 0.)
+        a_hnet, p_hnet, n_hnet = LaneEval.bench(pred_lanes_hnet, gt_lanes, h_samples, 0.)
+
+
         # Plot the results
         x_gt_trehshes = get_x_threshes_of_gt_evaluation(gt_lanes, h_samples)
         # Create a figure with 1 row and 2 columns
@@ -156,10 +196,29 @@ def evaluate(args):
         # Plot the first subplot
         axs[0].imshow(cv2.cvtColor(gt_img_org, cv2.COLOR_BGR2RGB))
         axs[0].imshow(fit_lanes_cluster_results, interpolation='nearest', alpha=0.3, cmap='inferno')
+
+        for lane_idx, lane_hnet in enumerate(pred_lanes_hnet):
+            axs[0].scatter(lane_hnet, h_samples, color='white', s=8)
+            for pt_idx, x in enumerate(lane_hnet):
+                axs[0].annotate(lane_idx, (x, h_samples[pt_idx]), color='white')
+
+        # write the a_hnet, p_hnet, n_hnet on the image
+        axs[0].text(10, 50, f"a_hnet: {a_hnet:.2f}, p_hnet: {p_hnet:.2f}, n_hnet: {n_hnet:.2f}", color='white')
         axs[0].set_title('fit_lanes_cluster_results')
         # Plot the second subplot
-        axs[1].imshow(cv2.cvtColor(gt_img_org, cv2.COLOR_BGR2RGB), cmap='inferno')
-        axs[1].imshow(cluster_result, interpolation='nearest', alpha=0.3, cmap='inferno')
+        # axs[1].imshow(cv2.cvtColor(gt_img_org, cv2.COLOR_BGR2RGB), cmap='inferno')
+        # axs[1].imshow(cluster_result, interpolation='nearest', alpha=0.3, cmap='inferno')
+        # resize rgb_emb
+        rgb_emb_org = cv2.resize(rgb_emb, dsize=(org_shape[1], org_shape[0]), interpolation=cv2.INTER_NEAREST)
+        axs[1].imshow(rgb_emb_org, interpolation='nearest', alpha=0.3, cmap='inferno')
+
+        for lane_idx, lane_lanenet in enumerate(pred_lanes_lanenet):
+            axs[1].scatter(lane_lanenet, h_samples, color='white', s=8)
+            for pt_idx, x in enumerate(lane_lanenet):
+                axs[1].annotate(lane_idx, (x, h_samples[pt_idx]), color='white')
+
+        # write the a_lanenet, p_lanenet, n_lanenet on the image
+        axs[1].text(10, 50, f"a_lanenet: {a_lanenet:.2f}, p_lanenet: {p_lanenet:.2f}, n_lanenet: {n_lanenet:.2f}", color='white')
         axs[1].set_title('cluster_result')
         for ax in axs:
             # draw GT with trehsolds for each gt pixel
@@ -172,36 +231,16 @@ def evaluate(args):
                 xs_gt_lane = [np.clip(gt_lane[relevant_gt_lane_indices] - x_thresh, 0, gt_img_org.shape[1]),
                             np.clip(gt_lane[relevant_gt_lane_indices] + x_thresh, 0, gt_img_org.shape[1])]
                 ys_gt_lanes = [h_samples[relevant_gt_lane_indices], h_samples[relevant_gt_lane_indices]]
-                ax.scatter(gt_lane[relevant_gt_lane_indices], h_samples[relevant_gt_lane_indices], color='green', s=3)
-                ax.plot(xs_gt_lane, ys_gt_lanes, '-', color='red')
+                ax.scatter(gt_lane[relevant_gt_lane_indices], h_samples[relevant_gt_lane_indices], color='green', s=8)
+                # draw above each scatter pt the lane idx value
+                for i, relevant_idx in enumerate(relevant_gt_lane_indices):
+                    ax.annotate(lane_idx, (gt_lane[relevant_idx], h_samples[relevant_idx]), color='green')
+                ax.plot(xs_gt_lane, ys_gt_lanes, '-', color='green', alpha=0.5)
+
         # Adjust layout to prevent clipping of titles
         plt.tight_layout()
         # Show the figure
         plt.show()
-
-        for line_idx in elements:
-            if line_idx == 0:
-                continue
-            else:
-                mask = (cluster_result == line_idx)
-                fit_lanes_mask = (fit_lanes_cluster_results == line_idx)
-
-                select_mask = mask[h_samples]
-                select_mask = fit_lanes_mask[h_samples] # todo - use this to evaluate the model after hnet poly fit
-                row_result = []
-                for row in range(len(h_samples)):
-                    col_indexes = np.nonzero(select_mask[row])[0]
-                    if len(col_indexes) == 0:
-                        row_result.append(-2)
-                    else:
-                        row_result.append(int(col_indexes.min() + (col_indexes.max() - col_indexes.min()) / 2))
-
-                # Append results to .json file
-                json_pred[i]['lanes'].append(row_result)
-                json_pred[i]['run_time'] = time_end - time_start
-                all_time_forward.append(time_end - time_start)
-                all_time_clustering.append(clu_end - clu_start)
-                all_time_hnet_and_fit.append(run_hnet_fit_end - run_hnet_fit_start)
 
     # Calculate the average duration 
     # of a forward pass as also of a clustering run

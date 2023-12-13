@@ -132,14 +132,14 @@ def hnet_transform_back_points_after_polyfit(image, hnet_model, list_lane_pts, p
     return preds_transformation_back_list
 
 
-def run_hnet_and_fit_from_lanenet_cluster(cluster_result_from_lanenet,
+def run_hnet_and_fit_from_lanenet_cluster(cluster_result_for_hnet,
                                           loaded_hnet_model, image,
                                           poly_fit_order=3,
                                           take_average_lane_cluster_pts=False,
                                           device_to_use='cuda'):
     """
     Run the hnet model and fit the lanes points from the lanenet cluster
-    :param cluster_result_from_lanenet: the cluster result from the lanenet model
+    :param cluster_result_for_hnet: the cluster result from the lanenet model
     :param loaded_hnet_model: the loaded hnet model
     :param image: the image to run the hnet model on
     :param poly_fit_order: the order of the polynomial to fit
@@ -148,8 +148,6 @@ def run_hnet_and_fit_from_lanenet_cluster(cluster_result_from_lanenet,
     :param device_to_use: the device to use
     """
     image_hnet = cv2.resize(image, (128, 64), interpolation=cv2.INTER_LINEAR)
-    cluster_result_for_hnet = np.array(
-        cluster_result_from_lanenet, dtype=np.uint8)  # todo maybe this is not needed
     elements = np.unique(cluster_result_for_hnet)
     lanes_pts = []
     for line_idx in elements:
@@ -174,8 +172,7 @@ def run_hnet_and_fit_from_lanenet_cluster(cluster_result_from_lanenet,
 
 
     # transform list of numpy to list of torch
-    lanes_pts = [torch.tensor(lane_pts, dtype=torch.float32)
-                 for lane_pts in lanes_pts]
+    lanes_pts = [torch.tensor(lane_pts) for lane_pts in lanes_pts]
     image_for_hnet_inference = torch.tensor(
         image_hnet, dtype=torch.float32, device=device_to_use)
     image_for_hnet_inference = image_for_hnet_inference.permute(2, 0, 1)
@@ -190,12 +187,11 @@ def run_hnet_and_fit_from_lanenet_cluster(cluster_result_from_lanenet,
     fit_lanes_cluster_results = np.zeros(
         (cluster_result_for_hnet.shape[0], cluster_result_for_hnet.shape[1]), dtype=np.uint8)
     for i, lane in enumerate(lanes_transformed_back):
-        for point in lane:
-            # check point validity (inside the image)
-            if point[1] < 0 or point[0] < 0 or point[1] >= cluster_result_for_hnet.shape[0] or point[0] >= cluster_result_for_hnet.shape[1]:
-                continue
+        for point in lane:           
+            col_coord = np.clip(int(torch.round(point[0])), 0, cluster_result_for_hnet.shape[1]-1)
+            row_coord = np.clip(int(torch.round(point[1])), 0, cluster_result_for_hnet.shape[0]-1)
             # +1 because the background is 0
-            fit_lanes_cluster_results[int(point[1]), int(point[0])] = i + 1
+            fit_lanes_cluster_results[row_coord, col_coord] = i + 1
 
     return image_hnet, lanes_transformed_back, fit_lanes_cluster_results
 

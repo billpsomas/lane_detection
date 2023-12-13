@@ -25,6 +25,7 @@
 - [ ] consider connect through line all the points from poly in image plan after fit
 - [ ] consider add RANSAC to points in fit during inference and also maybe in training. (in hnet_transformation?)
 - [ ] evaluate lanenet cluster and hnet at the same time with different preds fiels - to compare
+  - [ ] save visu debug images for both in evaluation 
 
 # TODO if we have time
 - [ ] train with all lanes in the same image at one 
